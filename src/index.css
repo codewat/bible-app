@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply transition-colors duration-200;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(160, 140, 110, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(160, 140, 110, 0.5);
+}
+
+/* Smooth verse highlight animations */
+.verse-highlight-yellow {
+  background-color: rgba(254, 240, 138, 0.45);
+}
+.dark .verse-highlight-yellow,
+.theme-marian .verse-highlight-yellow,
+.theme-olive .verse-highlight-yellow {
+  background-color: rgba(202, 138, 4, 0.3);
+}
+
+.verse-highlight-green {
+  background-color: rgba(187, 247, 208, 0.45);
+}
+.dark .verse-highlight-green,
+.theme-marian .verse-highlight-green,
+.theme-olive .verse-highlight-green {
+  background-color: rgba(22, 163, 74, 0.3);
+}
+
+.verse-highlight-blue {
+  background-color: rgba(191, 219, 254, 0.45);
+}
+.dark .verse-highlight-blue,
+.theme-marian .verse-highlight-blue,
+.theme-olive .verse-highlight-blue {
+  background-color: rgba(37, 99, 230, 0.3);
+}
+
+.verse-highlight-pink {
+  background-color: rgba(251, 207, 232, 0.45);
+}
+.dark .verse-highlight-pink,
+.theme-marian .verse-highlight-pink,
+.theme-olive .verse-highlight-pink {
+  background-color: rgba(219, 39, 119, 0.3);
+}
+
+.verse-highlight-purple {
+  background-color: rgba(233, 213, 255, 0.45);
+}
+.dark .verse-highlight-purple,
+.theme-marian .verse-highlight-purple,
+.theme-olive .verse-highlight-purple {
+  background-color: rgba(147, 51, 234, 0.3);
+}
+
+.verse-speaking {
+  outline: 2px solid #d97706;
+  background-color: rgba(245, 158, 11, 0.15);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+/* Marian Celestial Blue Theme */
+.theme-marian {
+  color-scheme: dark;
+}
+.theme-marian body, body.theme-marian {
+  background-color: #0b1320 !important;
+  color: #e5eaf2 !important;
+}
+
+/* Contemplative Gethsemane Olive Theme */
+.theme-olive {
+  color-scheme: dark;
+}
+.theme-olive body, body.theme-olive {
+  background-color: #121c13 !important;
+  color: #e2e8e3 !important;
+}
