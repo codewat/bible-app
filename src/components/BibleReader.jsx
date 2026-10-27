@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { 
   ChevronLeft, ChevronRight, Bookmark, MessageSquare, 
-  Sparkles, Volume2, Check, Copy, X, Plus 
+  Sparkles, Volume2, Check, Copy, X 
 } from 'lucide-react';
 
 export default function BibleReader({
@@ -78,7 +78,7 @@ export default function BibleReader({
   };
 
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-36 relative">
+    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-36 relative">
       {/* Chapter Title & Header */}
       <div className="text-center mb-8 pb-6 border-b border-amber-900/10 dark:border-amber-500/10">
         <div className="flex items-center justify-center space-x-2 mb-2">
@@ -108,7 +108,7 @@ export default function BibleReader({
         )}
 
         <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-2">
-          Tip: Click any verse (or multiple verses) to combine and save to bookmark
+          Tip: Tap any verse (or multiple verses) to combine and save to bookmark
         </p>
       </div>
 
@@ -233,16 +233,17 @@ export default function BibleReader({
         </button>
       </div>
 
-      {/* FLOATING SIDE ACTION DOCK (Appears when verses are clicked/selected) */}
+      {/* FLOATING ACTION DOCK: Centered on mobile, no verse count on mobile, Read button says "Read" */}
       {selectedVerses.length > 0 && (
-        <div className="fixed bottom-6 right-4 sm:right-8 z-40 animate-slideUp">
-          <div className="bg-neutral-900/95 dark:bg-neutral-800/95 text-white backdrop-blur-md rounded-2xl shadow-2xl border border-amber-500/30 p-2 sm:p-2.5 flex items-center space-x-2">
-            {/* Selection Info */}
-            <div className="px-2.5 py-1 text-left border-r border-neutral-700 mr-1 max-w-[150px] sm:max-w-[200px] truncate">
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 w-[94%] max-w-lg sm:w-auto sm:left-auto sm:right-8 sm:translate-x-0 z-40 animate-slideUp">
+          <div className="bg-neutral-900/95 dark:bg-neutral-800/95 text-white backdrop-blur-md rounded-2xl shadow-2xl border border-amber-500/30 p-2 sm:p-2.5 flex items-center justify-between sm:justify-start space-x-1.5 sm:space-x-2">
+            {/* Selection Citation (Verse count is hidden on mobile!) */}
+            <div className="px-2 py-1 text-left border-r border-neutral-700 mr-0.5 sm:mr-1 max-w-[110px] sm:max-w-[200px] truncate">
               <p className="font-serif font-bold text-xs sm:text-sm text-amber-300 truncate">
                 {selectionCitation}
               </p>
-              <p className="text-[10px] text-neutral-400">
+              {/* Count line only shown on sm and up; completely hidden on mobile! */}
+              <p className="hidden sm:block text-[10px] text-neutral-400">
                 {selectedVerses.length} {selectedVerses.length === 1 ? 'verse selected' : 'verses combined'}
               </p>
             </div>
@@ -250,38 +251,39 @@ export default function BibleReader({
             {/* Primary Action: Save to Bookmark */}
             <button
               onClick={onOpenSaveBookmarkModal}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-xs sm:text-sm shadow-md transition transform active:scale-95"
-              title="Save selected verses to bookmarks"
+              className="flex items-center space-x-1 px-2.5 sm:px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-xs sm:text-sm shadow-md transition transform active:scale-95 shrink-0"
+              title="Save to Bookmark"
             >
-              <Bookmark className="w-4 h-4 fill-white" />
-              <span>Save to Bookmark</span>
+              <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white shrink-0" />
+              <span>Save</span>
             </button>
 
-            {/* Listen button */}
+            {/* Read Button: explicitly says "Read" */}
             <button
               onClick={() => onPlaySelectedVerses(sortedSelected)}
-              className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition"
-              title="Listen to selected verses"
+              className="flex items-center space-x-1 px-2.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition text-xs shrink-0 font-medium"
+              title="Read selected verses aloud"
             >
-              <Volume2 className="w-4 h-4" />
+              <Volume2 className="w-3.5 h-3.5 shrink-0" />
+              <span>Read</span>
             </button>
 
             {/* Copy button */}
             <button
               onClick={handleCopySelected}
-              className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition"
+              className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition shrink-0"
               title="Copy combined text"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
 
             {/* Deselect / Cancel button */}
             <button
               onClick={onClearSelection}
-              className="p-2 rounded-xl hover:bg-neutral-800 text-neutral-400 hover:text-white transition"
+              className="p-2 rounded-xl hover:bg-neutral-800 text-neutral-400 hover:text-white transition shrink-0"
               title="Cancel selection"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
