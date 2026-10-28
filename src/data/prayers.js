@@ -421,6 +421,195 @@ export function getPrayerForBead(beadIndex, lang = 'en') {
   };
 }
 
+// Builds the complete, continuous step-by-step Catholic Rosary prayer sequence
+export function buildRosarySequence(mysteryKey = 'joyful') {
+  const mystery = ROSARY_MYSTERIES[mysteryKey] || ROSARY_MYSTERIES.joyful;
+  const sequence = [];
+
+  // Step 0: The Apostles' Creed (with Sign of the Cross)
+  sequence.push({
+    id: 'intro_creed',
+    section: 'intro',
+    stepTitle: "The Apostles' Creed",
+    subtitle: 'Crucifix • Sign of the Cross & Creed',
+    beadLabel: '✝️ Creed',
+    beadType: 'crucifix',
+    decadeIndex: -1,
+    beadIndex: -1,
+    title: "The Apostles' Creed",
+    latinTitle: 'Symbolum Apostolorum',
+    text: `In the name of the Father, and of the Son, and of the Holy Ghost. Amen.\n\nI believe in God, the Father Almighty, Creator of heaven and earth; and in Jesus Christ, His only Son, our Lord; who was conceived by the Holy Ghost, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died, and was buried. He descended into hell; the third day He arose again from the dead; He ascended into heaven, and sitteth at the right hand of God the Father Almighty; from thence He shall come to judge the living and the dead. I believe in the Holy Ghost, the Holy Catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen.`,
+    speechText: `In the name of the Father, and of the Son, and of the Holy Ghost. Amen. I believe in God, the Father Almighty, Creator of heaven and earth; and in Jesus Christ, His only Son, our Lord; who was conceived by the Holy Ghost, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died, and was buried. He descended into hell; the third day He arose again from the dead; He ascended into heaven, and sitteth at the right hand of God the Father Almighty; from thence He shall come to judge the living and the dead. I believe in the Holy Ghost, the Holy Catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen.`
+  });
+
+  // Step 1: Opening Our Father
+  sequence.push({
+    id: 'intro_our_father',
+    section: 'intro',
+    stepTitle: 'Our Father',
+    subtitle: '1st Large Bead • For the Holy Father',
+    beadLabel: 'OF',
+    beadType: 'our_father',
+    decadeIndex: -1,
+    beadIndex: 0,
+    title: "The Lord's Prayer (Our Father)",
+    latinTitle: 'Pater Noster',
+    text: `Our Father, who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven.\n\nGive us this day our daily bread; and forgive us our trespasses as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.`,
+    speechText: `Our Father, who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.`
+  });
+
+  // Steps 2-4: Three Hail Marys (Faith, Hope, Charity)
+  const introHailMarys = [
+    { num: 1, virtue: 'Faith', desc: 'for an increase in Faith' },
+    { num: 2, virtue: 'Hope', desc: 'for an increase in Hope' },
+    { num: 3, virtue: 'Charity', desc: 'for an increase in Charity & Divine Love' }
+  ];
+
+  introHailMarys.forEach((item) => {
+    sequence.push({
+      id: `intro_hail_mary_${item.num}`,
+      section: 'intro',
+      stepTitle: `Hail Mary (${item.virtue})`,
+      subtitle: `Opening Bead ${item.num} of 3 • ${item.desc}`,
+      beadLabel: `${item.num}`,
+      beadType: 'hail_mary',
+      decadeIndex: -1,
+      beadIndex: item.num,
+      title: `Hail Mary (For ${item.virtue})`,
+      latinTitle: `Ave Maria • Bead ${item.num} of 3`,
+      text: `Hail Mary, full of grace, the Lord is with thee; blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus.\n\nHoly Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.`,
+      speechText: `Hail Mary, full of grace, the Lord is with thee; blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.`
+    });
+  });
+
+  // Step 5: Opening Glory Be
+  sequence.push({
+    id: 'intro_glory_be',
+    section: 'intro',
+    stepTitle: 'Glory Be',
+    subtitle: 'Chain Bead • Praising the Trinity',
+    beadLabel: 'GB',
+    beadType: 'glory_be',
+    decadeIndex: -1,
+    beadIndex: 4,
+    title: 'Glory Be to the Father',
+    latinTitle: 'Gloria Patri',
+    text: `Glory be to the Father, and to the Son, and to the Holy Ghost. As it was in the beginning, is now, and ever shall be, world without end. Amen.`,
+    speechText: `Glory be to the Father, and to the Son, and to the Holy Ghost. As it was in the beginning, is now, and ever shall be, world without end. Amen.`
+  });
+
+  // Decades 1 to 5
+  mystery.decades.forEach((dec, dIdx) => {
+    // 1. Decade Mystery Announcement & Meditation
+    sequence.push({
+      id: `decade_${dIdx}_meditation`,
+      section: 'decade',
+      isMeditation: true,
+      decadeIndex: dIdx,
+      beadIndex: -1,
+      stepTitle: `Decade ${dIdx + 1}: ${dec.title}`,
+      subtitle: `🕊️ Fruit: ${dec.fruit}`,
+      beadLabel: `Decade ${dIdx + 1}`,
+      beadType: 'meditation',
+      title: `Decade ${dIdx + 1} of 5: ${dec.title}`,
+      latinTitle: mystery.name,
+      fruit: dec.fruit,
+      scripture: dec.scripture,
+      meditation: dec.meditation,
+      text: `Decade ${dIdx + 1}: ${dec.title}\n\n🕊️ Spiritual Fruit: ${dec.fruit}\n\n"${dec.scripture}"\n\nMeditation:\n${dec.meditation}`,
+      speechText: `The ${dIdx === 0 ? 'First' : dIdx === 1 ? 'Second' : dIdx === 2 ? 'Third' : dIdx === 3 ? 'Fourth' : 'Fifth'} Mystery: ${dec.title}. Spiritual Fruit: ${dec.fruit}. ${dec.meditation}`
+    });
+
+    // 2. Decade Our Father Bead
+    sequence.push({
+      id: `decade_${dIdx}_bead_0`,
+      section: 'decade',
+      decadeIndex: dIdx,
+      beadIndex: 0,
+      stepTitle: `Decade ${dIdx + 1} • Our Father`,
+      subtitle: `Decade ${dIdx + 1} of 5 • Our Father Bead`,
+      beadLabel: 'OF',
+      beadType: 'our_father',
+      title: "The Lord's Prayer (Our Father)",
+      latinTitle: 'Pater Noster',
+      text: `Our Father, who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven.\n\nGive us this day our daily bread; and forgive us our trespasses as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.`,
+      speechText: `Our Father, who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.`
+    });
+
+    // 3. 10 Hail Mary Beads
+    for (let h = 1; h <= 10; h++) {
+      sequence.push({
+        id: `decade_${dIdx}_bead_${h}`,
+        section: 'decade',
+        decadeIndex: dIdx,
+        beadIndex: h,
+        stepTitle: `Decade ${dIdx + 1} • Hail Mary (${h}/10)`,
+        subtitle: `Decade ${dIdx + 1} of 5 • Bead ${h} of 10`,
+        beadLabel: `${h}`,
+        beadType: 'hail_mary',
+        title: 'Hail Mary',
+        latinTitle: `Ave Maria • Bead ${h} of 10`,
+        text: `Hail Mary, full of grace, the Lord is with thee; blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus.\n\nHoly Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.`,
+        speechText: `Hail Mary, full of grace, the Lord is with thee; blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.`
+      });
+    }
+
+    // 4. Glory Be & Fatima Prayer Bead
+    sequence.push({
+      id: `decade_${dIdx}_bead_11`,
+      section: 'decade',
+      decadeIndex: dIdx,
+      beadIndex: 11,
+      stepTitle: `Decade ${dIdx + 1} • Glory Be & Fatima`,
+      subtitle: `Decade ${dIdx + 1} of 5 • Concluding Prayers`,
+      beadLabel: 'GB',
+      beadType: 'glory_be_fatima',
+      isDual: true,
+      title: 'Glory Be & Fatima Prayer',
+      latinTitle: 'Decade Concluding Prayers',
+      firstTitle: '1. Glory Be to the Father',
+      firstLatinTitle: 'Gloria Patri',
+      firstText: `Glory be to the Father, and to the Son, and to the Holy Ghost. As it was in the beginning, is now, and ever shall be, world without end. Amen.`,
+      secondTitle: '2. The Fatima Prayer',
+      secondLatinTitle: 'O My Jesus',
+      secondText: `O My Jesus, forgive us our sins, save us from the fires of hell, lead all souls to Heaven, especially those most in need of Thy mercy. Amen.`,
+      text: `1. Glory Be to the Father\nGlory be to the Father, and to the Son, and to the Holy Ghost. As it was in the beginning, is now, and ever shall be, world without end. Amen.\n\n2. The Fatima Prayer\nO My Jesus, forgive us our sins, save us from the fires of hell, lead all souls to Heaven, especially those most in need of Thy mercy. Amen.`,
+      speechText: `Glory be to the Father, and to the Son, and to the Holy Ghost. As it was in the beginning, is now, and ever shall be, world without end. Amen. O My Jesus, forgive us our sins, save us from the fires of hell, lead all souls to Heaven, especially those most in need of Thy mercy. Amen.`
+    });
+  });
+
+  // Concluding Prayers
+  // Hail Holy Queen
+  sequence.push({
+    id: 'concluding_hail_holy_queen',
+    section: 'concluding',
+    stepTitle: 'Hail, Holy Queen',
+    subtitle: 'Salve Regina • Rosary Concluding Salutation',
+    beadLabel: '👑 Queen',
+    beadType: 'concluding',
+    title: 'Hail, Holy Queen',
+    latinTitle: 'Salve Regina',
+    text: `Hail, Holy Queen, Mother of Mercy, our life, our sweetness, and our hope! To thee do we cry, poor banished children of Eve; to thee do we send up our sighs, mourning and weeping in this valley of tears. Turn then, most gracious advocate, thine eyes of mercy toward us; and after this our exile, show unto us the blessed fruit of thy womb, Jesus. O clement, O loving, O sweet Virgin Mary.\n\nV. Pray for us, O Holy Mother of God.\nR. That we may be made worthy of the promises of Christ.`,
+    speechText: `Hail, Holy Queen, Mother of Mercy, our life, our sweetness, and our hope! To thee do we cry, poor banished children of Eve; to thee do we send up our sighs, mourning and weeping in this valley of tears. Turn then, most gracious advocate, thine eyes of mercy toward us; and after this our exile, show unto us the blessed fruit of thy womb, Jesus. O clement, O loving, O sweet Virgin Mary. Pray for us, O Holy Mother of God, that we may be made worthy of the promises of Christ.`
+  });
+
+  // Concluding Collect
+  sequence.push({
+    id: 'concluding_prayer',
+    section: 'concluding',
+    stepTitle: 'Concluding Prayer',
+    subtitle: 'Closing Collect & Sign of the Cross',
+    beadLabel: '✝️ Amen',
+    beadType: 'concluding',
+    title: 'Rosary Concluding Prayer',
+    latinTitle: 'Oratio Conclusiva',
+    text: `O God, whose only begotten Son, by His life, death, and resurrection, has purchased for us the rewards of eternal salvation; grant, we beseech Thee, that meditating upon these mysteries of the Most Holy Rosary of the Blessed Virgin Mary, we may imitate what they contain and obtain what they promise, through the same Christ our Lord. Amen.\n\nIn the name of the Father, and of the Son, and of the Holy Ghost. Amen.`,
+    speechText: `Let us pray: O God, whose only begotten Son, by His life, death, and resurrection, has purchased for us the rewards of eternal salvation; grant, we beseech Thee, that meditating upon these mysteries of the Most Holy Rosary of the Blessed Virgin Mary, we may imitate what they contain and obtain what they promise, through the same Christ our Lord. Amen. In the name of the Father, and of the Son, and of the Holy Ghost. Amen.`
+  });
+
+  return sequence;
+}
+
 export const COMMON_PRAYERS = [
   {
     id: 'sign_of_cross',

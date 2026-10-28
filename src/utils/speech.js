@@ -60,11 +60,52 @@ class SpeechController {
 
     this.versesQueue = [verseObj];
     this.currentIndex = 0;
+    this.onItemChangeCallback = null;
     this.isPlaying = true;
     this.isPaused = false;
     this.triggerState();
 
     this.speakVerseAt(0);
+  }
+
+  playSequence(items, startIndex = 0, onItemChange = null) {
+    if (!this.synth) return;
+    this.stop();
+
+    this.versesQueue = items;
+    this.currentIndex = startIndex;
+    this.onItemChangeCallback = onItemChange;
+    this.isPlaying = true;
+    this.isPaused = false;
+    this.triggerState();
+
+    this.speakVerseAt(this.currentIndex);
+  }
+
+  jumpTo(index) {
+    if (!this.synth || !this.isPlaying) return;
+    if (index >= 0 && index < this.versesQueue.length) {
+      this.synth.cancel();
+      this.speakVerseAt(index);
+    }
+  }
+
+  next() {
+    if (!this.synth || !this.isPlaying) return;
+    if (this.currentIndex + 1 < this.versesQueue.length) {
+      this.synth.cancel();
+      this.speakVerseAt(this.currentIndex + 1);
+    } else {
+      this.stop();
+    }
+  }
+
+  prev() {
+    if (!this.synth || !this.isPlaying) return;
+    if (this.currentIndex > 0) {
+      this.synth.cancel();
+      this.speakVerseAt(this.currentIndex - 1);
+    }
   }
 
   speakVerseAt(index) {
@@ -77,6 +118,9 @@ class SpeechController {
     const item = this.versesQueue[index];
     if (this.onVerseChangeCallback) {
       this.onVerseChangeCallback(item);
+    }
+    if (this.onItemChangeCallback) {
+      this.onItemChangeCallback(item, index);
     }
 
     const textToSpeak = item.verse 
@@ -142,6 +186,7 @@ class SpeechController {
     this.currentUtterance = null;
     this.versesQueue = [];
     this.currentIndex = 0;
+    this.onItemChangeCallback = null;
     if (this.onVerseChangeCallback) {
       this.onVerseChangeCallback(null);
     }
