@@ -10,8 +10,14 @@ class SpeechController {
     this.isPaused = false;
     this.onVerseChangeCallback = null;
     this.onStateChangeCallback = null;
+    this.stateListeners = new Set();
     this.versesQueue = [];
     this.currentIndex = 0;
+  }
+
+  addStateListener(listener) {
+    this.stateListeners.add(listener);
+    return () => this.stateListeners.delete(listener);
   }
 
   isSupported() {
@@ -80,13 +86,20 @@ class SpeechController {
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.rate = this.rate;
     utterance.pitch = this.pitch;
-    utterance.lang = 'en-US';
+    utterance.lang = item.lang || 'en-US';
 
-    // Pick a natural English voice if available
+    // Pick a voice if available
     const voices = this.synth.getVoices();
-    const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Siri') || v.name.includes('Samantha')));
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
+    if (item.lang && !item.lang.startsWith('en')) {
+      const matchVoice = voices.find(v => v.lang.toLowerCase().startsWith(item.lang.slice(0, 2).toLowerCase()));
+      if (matchVoice) {
+        utterance.voice = matchVoice;
+      }
+    } else {
+      const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Siri') || v.name.includes('Samantha')));
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
     }
 
     utterance.onend = () => {
@@ -136,14 +149,22 @@ class SpeechController {
   }
 
   triggerState() {
+    const state = {
+      isPlaying: this.isPlaying,
+      isPaused: this.isPaused,
+      currentIndex: this.currentIndex,
+      rate: this.rate
+    };
     if (this.onStateChangeCallback) {
-      this.onStateChangeCallback({
-        isPlaying: this.isPlaying,
-        isPaused: this.isPaused,
-        currentIndex: this.currentIndex,
-        rate: this.rate
-      });
+      this.onStateChangeCallback(state);
     }
+    this.stateListeners.forEach((listener) => {
+      try {
+        listener(state);
+      } catch (err) {
+        console.warn('Speech listener error:', err);
+      }
+    });
   }
 }
 
