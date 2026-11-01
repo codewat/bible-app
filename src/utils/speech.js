@@ -1,4 +1,4 @@
-// Browser Web Speech API Audio Controller (100% Offline)
+// Browser Web Speech API Audio Controller (100% Offline, Pure English Audio Engine)
 
 class SpeechController {
   constructor() {
@@ -13,6 +13,65 @@ class SpeechController {
     this.stateListeners = new Set();
     this.versesQueue = [];
     this.currentIndex = 0;
+    this.onItemChangeCallback = null;
+    this.voices = [];
+
+    if (this.synth) {
+      this.loadVoices();
+      if (typeof window !== 'undefined' && window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          this.loadVoices();
+        };
+      }
+    }
+  }
+
+  loadVoices() {
+    if (!this.synth) return;
+    try {
+      this.voices = this.synth.getVoices() || [];
+    } catch {
+      this.voices = [];
+    }
+  }
+
+  // Selects the highest quality natural English voice available on the device
+  getBestEnglishVoice() {
+    if (!this.synth) return null;
+    const voices = (this.voices && this.voices.length > 0) ? this.voices : (this.synth.getVoices() || []);
+    if (!voices || voices.length === 0) return null;
+
+    // Filter exclusively English voices
+    const enVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+    if (enVoices.length === 0) return voices[0] || null;
+
+    // Preferred natural, clear English voices across Mac, Windows, iOS, Chrome, Android
+    const priorityNames = [
+      'Google US English',
+      'Google UK English Female',
+      'Samantha',
+      'Siri',
+      'Daniel',
+      'Karen',
+      'Natural',
+      'Jenny',
+      'Guy',
+      'Aria',
+      'Serena',
+      'Oliver',
+      'Ava'
+    ];
+
+    for (const name of priorityNames) {
+      const match = enVoices.find(v => v.name.includes(name) && !v.name.toLowerCase().includes('compact'));
+      if (match) return match;
+    }
+
+    // Secondary: standard en-US or en-GB
+    const standardEn = enVoices.find(v => v.lang === 'en-US' || v.lang === 'en_US' || v.lang === 'en-GB');
+    if (standardEn) return standardEn;
+
+    return enVoices[0];
   }
 
   addStateListener(listener) {
@@ -66,6 +125,11 @@ class SpeechController {
     this.triggerState();
 
     this.speakVerseAt(0);
+  }
+
+  // Alias for compatibility
+  speakSingleVerse(verseObj) {
+    this.playSingleVerse(verseObj);
   }
 
   playSequence(items, startIndex = 0, onItemChange = null) {
@@ -123,27 +187,26 @@ class SpeechController {
       this.onItemChangeCallback(item, index);
     }
 
-    const textToSpeak = item.verse 
+    const rawText = item.verse 
       ? `Verse ${item.verse}. ${item.text}` 
       : item.text;
 
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    // Clean text for natural pronunciation (remove bracketed footnotes, markdown asterisks, etc.)
+    const cleanText = rawText
+      .replace(/\[\d+\]/g, '')
+      .replace(/\[.*?\]/g, '')
+      .replace(/[*_#~`]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.rate = this.rate;
     utterance.pitch = this.pitch;
-    utterance.lang = item.lang || 'en-US';
+    utterance.lang = 'en-US'; // Exclusively English audio
 
-    // Pick a voice if available
-    const voices = this.synth.getVoices();
-    if (item.lang && !item.lang.startsWith('en')) {
-      const matchVoice = voices.find(v => v.lang.toLowerCase().startsWith(item.lang.slice(0, 2).toLowerCase()));
-      if (matchVoice) {
-        utterance.voice = matchVoice;
-      }
-    } else {
-      const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Siri') || v.name.includes('Samantha')));
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
+    const englishVoice = this.getBestEnglishVoice();
+    if (englishVoice) {
+      utterance.voice = englishVoice;
     }
 
     utterance.onend = () => {
@@ -214,4 +277,3 @@ class SpeechController {
 }
 
 export const speechService = new SpeechController();
-
