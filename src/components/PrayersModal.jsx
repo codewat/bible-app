@@ -46,10 +46,14 @@ export default function PrayersModal({ isOpen, onClose }) {
   const divineMercySequence = useMemo(() => buildDivineMercySequence(), []);
   const [dmStepIndex, setDmStepIndex] = useState(0);
 
-  // Audio Playback State
-  const [audioMode, setAudioMode] = useState(null); // 'rosary' | 'divine_mercy' | 'single' | null
-  const [isAudioRunning, setIsAudioRunning] = useState(false);
-  const [isAudioPaused, setIsAudioPaused] = useState(false);
+  // Audio Playback State - Direct, responsive, instant state flags
+  const [isRosaryActive, setIsRosaryActive] = useState(false);
+  const [isRosaryPaused, setIsRosaryPaused] = useState(false);
+
+  const [isDmActive, setIsDmActive] = useState(false);
+  const [isDmPaused, setIsDmPaused] = useState(false);
+
+  const [isSingleRunning, setIsSingleRunning] = useState(false);
 
   // Relaxing Voice & Cadence Settings
   const [availableVoices, setAvailableVoices] = useState([]);
@@ -107,10 +111,12 @@ export default function PrayersModal({ isOpen, onClose }) {
     }
 
     const unsubscribe = speechService.addStateListener((state) => {
-      setIsAudioRunning(state.isPlaying);
-      setIsAudioPaused(state.isPaused);
+      if (state.isPaused) {
+        setIsRosaryPaused(true);
+        setIsDmPaused(true);
+      }
       if (!state.isPlaying) {
-        setAudioMode(null);
+        setIsSingleRunning(false);
       }
     });
     return () => {
@@ -121,9 +127,8 @@ export default function PrayersModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const isRosaryRunning = isAudioRunning && audioMode === 'rosary';
-  const isDmRunning = isAudioRunning && audioMode === 'divine_mercy';
-  const isSingleRunning = isAudioRunning && audioMode === 'single';
+  const isRosaryRunning = isRosaryActive && !isRosaryPaused;
+  const isDmRunning = isDmActive && !isDmPaused;
 
   // Rosary Active Step & Section Helpers
   const currentStep = rosarySequence[stepIndex] || rosarySequence[0];
@@ -151,9 +156,10 @@ export default function PrayersModal({ isOpen, onClose }) {
     speechService.stop();
     const targetIdx = typeof startIdx === 'number' ? startIdx : stepIndex;
     setStepIndex(targetIdx);
-    setAudioMode('rosary');
-    setIsAudioRunning(true);
-    setIsAudioPaused(false);
+    setIsRosaryActive(true);
+    setIsRosaryPaused(false);
+    setIsDmActive(false);
+    setIsDmPaused(false);
 
     const parsedRate = parseFloat(rosaryRate) || 0.85;
     speechService.setRate(parsedRate);
@@ -162,9 +168,18 @@ export default function PrayersModal({ isOpen, onClose }) {
     }
 
     const items = rosarySequence.map(s => ({ text: s.speechText, lang: 'en-US' }));
-    speechService.playSequence(items, targetIdx, (item, idx) => {
-      setStepIndex(idx);
-    }, { rate: parsedRate, voiceURI: selectedVoiceURI });
+    speechService.playSequence(
+      items, 
+      targetIdx, 
+      (item, idx) => {
+        setStepIndex(idx);
+      }, 
+      { rate: parsedRate, voiceURI: selectedVoiceURI },
+      () => {
+        setIsRosaryActive(false);
+        setIsRosaryPaused(false);
+      }
+    );
   };
 
   // Starts continuous Divine Mercy audio reciting full chaplet with 10x repetitions and NO titles
@@ -172,9 +187,10 @@ export default function PrayersModal({ isOpen, onClose }) {
     speechService.stop();
     const targetIdx = typeof startIdx === 'number' ? startIdx : dmStepIndex;
     setDmStepIndex(targetIdx);
-    setAudioMode('divine_mercy');
-    setIsAudioRunning(true);
-    setIsAudioPaused(false);
+    setIsDmActive(true);
+    setIsDmPaused(false);
+    setIsRosaryActive(false);
+    setIsRosaryPaused(false);
 
     const parsedRate = parseFloat(rosaryRate) || 0.85;
     speechService.setRate(parsedRate);
@@ -183,9 +199,18 @@ export default function PrayersModal({ isOpen, onClose }) {
     }
 
     const items = divineMercySequence.map(s => ({ text: s.speechText, lang: 'en-US' }));
-    speechService.playSequence(items, targetIdx, (item, idx) => {
-      setDmStepIndex(idx);
-    }, { rate: parsedRate, voiceURI: selectedVoiceURI });
+    speechService.playSequence(
+      items, 
+      targetIdx, 
+      (item, idx) => {
+        setDmStepIndex(idx);
+      }, 
+      { rate: parsedRate, voiceURI: selectedVoiceURI },
+      () => {
+        setIsDmActive(false);
+        setIsDmPaused(false);
+      }
+    );
   };
 
   const handleTestVoice = () => {
@@ -210,45 +235,44 @@ export default function PrayersModal({ isOpen, onClose }) {
   };
 
   const handlePauseResume = () => {
-    if (!isRosaryRunning) {
+    if (!isRosaryActive) {
       handleStartRosary(stepIndex);
       return;
     }
-    if (isAudioPaused) {
+    if (isRosaryPaused) {
       speechService.resume();
-      setIsAudioPaused(false);
+      setIsRosaryPaused(false);
     } else {
       speechService.pause();
-      setIsAudioPaused(true);
+      setIsRosaryPaused(true);
     }
   };
 
   const handlePauseResumeDm = () => {
-    if (!isDmRunning) {
+    if (!isDmActive) {
       handleStartDivineMercy(dmStepIndex);
       return;
     }
-    if (isAudioPaused) {
+    if (isDmPaused) {
       speechService.resume();
-      setIsAudioPaused(false);
+      setIsDmPaused(false);
     } else {
       speechService.pause();
-      setIsAudioPaused(true);
+      setIsDmPaused(true);
     }
   };
 
   const handleStopAudio = () => {
     speechService.stop();
-    setAudioMode(null);
-    setIsAudioRunning(false);
-    setIsAudioPaused(false);
+    setIsRosaryActive(false);
+    setIsRosaryPaused(false);
+    setIsDmActive(false);
+    setIsDmPaused(false);
+    setIsSingleRunning(false);
   };
 
   const handleStopDm = () => {
-    speechService.stop();
-    setAudioMode(null);
-    setIsAudioRunning(false);
-    setIsAudioPaused(false);
+    handleStopAudio();
   };
 
   const handleNextStep = () => {
@@ -257,8 +281,9 @@ export default function PrayersModal({ isOpen, onClose }) {
 
     setStepIndex(nextIdx);
 
-    if (isRosaryRunning) {
-      speechService.jumpTo(nextIdx);
+    if (isRosaryActive) {
+      setIsRosaryPaused(false);
+      handleStartRosary(nextIdx);
     }
 
     setTimeout(() => {
@@ -272,8 +297,9 @@ export default function PrayersModal({ isOpen, onClose }) {
 
     setStepIndex(prevIdx);
 
-    if (isRosaryRunning) {
-      speechService.jumpTo(prevIdx);
+    if (isRosaryActive) {
+      setIsRosaryPaused(false);
+      handleStartRosary(prevIdx);
     }
 
     setTimeout(() => {
@@ -287,8 +313,9 @@ export default function PrayersModal({ isOpen, onClose }) {
 
     setDmStepIndex(nextIdx);
 
-    if (isDmRunning) {
-      speechService.jumpTo(nextIdx);
+    if (isDmActive) {
+      setIsDmPaused(false);
+      handleStartDivineMercy(nextIdx);
     }
 
     setTimeout(() => {
@@ -302,8 +329,9 @@ export default function PrayersModal({ isOpen, onClose }) {
 
     setDmStepIndex(prevIdx);
 
-    if (isDmRunning) {
-      speechService.jumpTo(prevIdx);
+    if (isDmActive) {
+      setIsDmPaused(false);
+      handleStartDivineMercy(prevIdx);
     }
 
     setTimeout(() => {
@@ -313,8 +341,9 @@ export default function PrayersModal({ isOpen, onClose }) {
 
   const handleJumpToStep = (idx) => {
     setStepIndex(idx);
-    if (isRosaryRunning) {
-      speechService.jumpTo(idx);
+    if (isRosaryActive) {
+      setIsRosaryPaused(false);
+      handleStartRosary(idx);
     }
     setTimeout(() => {
       prayerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -323,8 +352,9 @@ export default function PrayersModal({ isOpen, onClose }) {
 
   const handleJumpToDmStep = (idx) => {
     setDmStepIndex(idx);
-    if (isDmRunning) {
-      speechService.jumpTo(idx);
+    if (isDmActive) {
+      setIsDmPaused(false);
+      handleStartDivineMercy(idx);
     }
     setTimeout(() => {
       dmPrayerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -354,17 +384,14 @@ export default function PrayersModal({ isOpen, onClose }) {
 
   // Pure prayer speech without titles
   const handleSpeakPrayer = (text, lang = 'en-US') => {
-    if (isAudioRunning) {
+    if (isSingleRunning || isRosaryActive || isDmActive) {
       handleStopAudio();
       return;
     }
     speechService.stop();
-    setAudioMode('single');
-    setIsAudioRunning(true);
-    setIsAudioPaused(false);
+    setIsSingleRunning(true);
     speechService.speakSingleVerse({ text, lang });
   };
-  const isPlayingAudio = isAudioRunning;
 
   const divineMercyPrayer = TRADITIONAL_PRAYERS.find(p => p.id === 'divine_mercy');
 
@@ -479,7 +506,7 @@ export default function PrayersModal({ isOpen, onClose }) {
 
             {/* START ROSARY / Audio Control Deck */}
             <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 text-white shadow-md">
-              {stepIndex === 0 && !isRosaryRunning ? (
+              {!isRosaryActive ? (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <div className="flex items-center space-x-2">
@@ -494,11 +521,11 @@ export default function PrayersModal({ isOpen, onClose }) {
                   </div>
 
                   <button
-                    onClick={() => handleStartRosary(0)}
+                    onClick={() => handleStartRosary(stepIndex || 0)}
                     className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs sm:text-sm tracking-wide shadow-lg transition flex items-center justify-center space-x-2 active:scale-95 cursor-pointer shrink-0"
                   >
                     <Play className="w-4 h-4 fill-amber-950" />
-                    <span>START ROSARY</span>
+                    <span>{stepIndex === 0 ? 'START ROSARY' : 'RESUME ROSARY'}</span>
                   </button>
                 </div>
               ) : (
@@ -510,20 +537,14 @@ export default function PrayersModal({ isOpen, onClose }) {
                         <h3 className="font-bold text-sm sm:text-base tracking-wide">
                           The Most Holy Rosary
                         </h3>
-                        {isRosaryRunning && !isAudioPaused && (
+                        {!isRosaryPaused ? (
                           <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-[10px] font-semibold">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                             <span>Reciting</span>
                           </span>
-                        )}
-                        {isRosaryRunning && isAudioPaused && (
+                        ) : (
                           <span className="px-2 py-0.5 rounded-full bg-amber-500/25 border border-amber-400/30 text-amber-200 text-[10px] font-semibold">
                             ⏸ Paused
-                          </span>
-                        )}
-                        {!isRosaryRunning && (
-                          <span className="px-2 py-0.5 rounded-full bg-white/15 text-white/90 text-[10px] font-semibold">
-                            Stopped
                           </span>
                         )}
                       </div>
@@ -532,7 +553,7 @@ export default function PrayersModal({ isOpen, onClose }) {
                       </p>
                     </div>
 
-                    {/* Action buttons: Restart, Prev, Pause/Resume, Next, Stop */}
+                    {/* Action buttons: Restart, Previous, Pause/Resume, Next, Stop */}
                     <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
                       {/* 1. Restart Button */}
                       <button
@@ -545,15 +566,16 @@ export default function PrayersModal({ isOpen, onClose }) {
                         <span>Restart</span>
                       </button>
 
-                      {/* 2. Previous Button */}
+                      {/* 2. Previous Button (with label) */}
                       <button
                         type="button"
                         onClick={handlePrevStep}
                         disabled={stepIndex === 0}
-                        className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white transition cursor-pointer"
+                        className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white/15 hover:bg-white/25 disabled:opacity-30 disabled:hover:bg-white/15 text-white text-xs font-semibold transition border border-white/20 flex items-center space-x-1.5 shadow-xs cursor-pointer"
                         title="Previous prayer"
                       >
-                        <SkipBack className="w-4 h-4" />
+                        <SkipBack className="w-3.5 h-3.5" />
+                        <span>Previous</span>
                       </button>
 
                       {/* 3. Pause / Resume Button */}
@@ -562,7 +584,7 @@ export default function PrayersModal({ isOpen, onClose }) {
                         onClick={handlePauseResume}
                         className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs sm:text-sm tracking-wide shadow-md transition flex items-center space-x-1.5 active:scale-95 cursor-pointer"
                       >
-                        {isRosaryRunning && !isAudioPaused ? (
+                        {!isRosaryPaused ? (
                           <>
                             <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-950" />
                             <span>Pause</span>
@@ -588,7 +610,7 @@ export default function PrayersModal({ isOpen, onClose }) {
                       </button>
 
                       {/* 5. Stop Button */}
-                      {isRosaryRunning && (
+                      {isRosaryActive && (
                         <button
                           type="button"
                           onClick={handleStopAudio}
@@ -821,21 +843,21 @@ export default function PrayersModal({ isOpen, onClose }) {
 
                 <button
                   onClick={() => {
-                    if (isRosaryRunning) {
-                      handleStopAudio();
+                    if (isRosaryActive && !isRosaryPaused) {
+                      handlePauseResume();
                     } else {
                       handleStartRosary(stepIndex);
                     }
                   }}
-                  className={`p-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition shadow-xs ${
-                    isRosaryRunning
+                  className={`p-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition shadow-xs cursor-pointer ${
+                    isRosaryActive && !isRosaryPaused
                       ? 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-white'
                       : 'bg-amber-700 hover:bg-amber-800 text-white'
                   }`}
-                  title={isRosaryRunning ? 'Stop audio' : 'Listen aloud'}
+                  title={isRosaryActive && !isRosaryPaused ? 'Pause audio' : 'Listen aloud'}
                 >
-                  <Volume2 className="w-4 h-4" />
-                  <span>{isRosaryRunning ? 'Playing' : 'Audio'}</span>
+                  <Volume2 className={`w-4 h-4 ${isRosaryActive && !isRosaryPaused ? 'animate-pulse' : ''}`} />
+                  <span>{isRosaryActive && !isRosaryPaused ? 'Playing' : 'Audio'}</span>
                 </button>
               </div>
 
@@ -1008,7 +1030,7 @@ export default function PrayersModal({ isOpen, onClose }) {
           <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4">
             {/* START DIVINE MERCY / Audio Control Deck */}
             <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-red-800 via-rose-900 to-amber-900 text-white shadow-md">
-              {dmStepIndex === 0 && !isDmRunning ? (
+              {!isDmActive ? (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <div className="flex items-center space-x-2">
@@ -1023,11 +1045,11 @@ export default function PrayersModal({ isOpen, onClose }) {
                   </div>
 
                   <button
-                    onClick={() => handleStartDivineMercy(0)}
+                    onClick={() => handleStartDivineMercy(dmStepIndex || 0)}
                     className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs sm:text-sm tracking-wide shadow-lg transition flex items-center justify-center space-x-2 active:scale-95 cursor-pointer shrink-0"
                   >
                     <Play className="w-4 h-4 fill-amber-950" />
-                    <span>START DIVINE MERCY</span>
+                    <span>{dmStepIndex === 0 ? 'START DIVINE MERCY' : 'RESUME CHAPLET'}</span>
                   </button>
                 </div>
               ) : (
@@ -1039,20 +1061,14 @@ export default function PrayersModal({ isOpen, onClose }) {
                         <h3 className="font-bold text-sm sm:text-base tracking-wide">
                           The Chaplet of the Divine Mercy
                         </h3>
-                        {isDmRunning && !isAudioPaused && (
+                        {!isDmPaused ? (
                           <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-[10px] font-semibold">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                             <span>Reciting</span>
                           </span>
-                        )}
-                        {isDmRunning && isAudioPaused && (
+                        ) : (
                           <span className="px-2 py-0.5 rounded-full bg-amber-500/25 border border-amber-400/30 text-amber-200 text-[10px] font-semibold">
                             ⏸ Paused
-                          </span>
-                        )}
-                        {!isDmRunning && (
-                          <span className="px-2 py-0.5 rounded-full bg-white/15 text-white/90 text-[10px] font-semibold">
-                            Stopped
                           </span>
                         )}
                       </div>
@@ -1061,7 +1077,7 @@ export default function PrayersModal({ isOpen, onClose }) {
                       </p>
                     </div>
 
-                    {/* Action buttons: Restart, Prev, Pause/Resume, Next, Stop */}
+                    {/* Action buttons: Restart, Previous, Pause/Resume, Next, Stop */}
                     <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
                       {/* 1. Restart Button */}
                       <button
@@ -1074,15 +1090,16 @@ export default function PrayersModal({ isOpen, onClose }) {
                         <span>Restart</span>
                       </button>
 
-                      {/* 2. Previous Button */}
+                      {/* 2. Previous Button (with label) */}
                       <button
                         type="button"
                         onClick={handlePrevStepDm}
                         disabled={dmStepIndex === 0}
-                        className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white transition cursor-pointer"
+                        className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white/15 hover:bg-white/25 disabled:opacity-30 disabled:hover:bg-white/15 text-white text-xs font-semibold transition border border-white/20 flex items-center space-x-1.5 shadow-xs cursor-pointer"
                         title="Previous prayer"
                       >
-                        <SkipBack className="w-4 h-4" />
+                        <SkipBack className="w-3.5 h-3.5" />
+                        <span>Previous</span>
                       </button>
 
                       {/* 3. Pause / Resume Button */}
@@ -1091,7 +1108,7 @@ export default function PrayersModal({ isOpen, onClose }) {
                         onClick={handlePauseResumeDm}
                         className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs sm:text-sm tracking-wide shadow-md transition flex items-center space-x-1.5 active:scale-95 cursor-pointer"
                       >
-                        {isDmRunning && !isAudioPaused ? (
+                        {!isDmPaused ? (
                           <>
                             <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-950" />
                             <span>Pause</span>
@@ -1117,7 +1134,7 @@ export default function PrayersModal({ isOpen, onClose }) {
                       </button>
 
                       {/* 5. Stop Button */}
-                      {isDmRunning && (
+                      {isDmActive && (
                         <button
                           type="button"
                           onClick={handleStopDm}
@@ -1337,21 +1354,21 @@ export default function PrayersModal({ isOpen, onClose }) {
 
                 <button
                   onClick={() => {
-                    if (isDmRunning) {
-                      handleStopDm();
+                    if (isDmActive && !isDmPaused) {
+                      handlePauseResumeDm();
                     } else {
                       handleStartDivineMercy(dmStepIndex);
                     }
                   }}
-                  className={`p-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition shadow-xs ${
-                    isDmRunning
+                  className={`p-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition shadow-xs cursor-pointer ${
+                    isDmActive && !isDmPaused
                       ? 'bg-rose-100 text-rose-900 dark:bg-rose-900 dark:text-white'
                       : 'bg-rose-700 hover:bg-rose-800 text-white'
                   }`}
-                  title={isDmRunning ? 'Stop audio' : 'Listen aloud'}
+                  title={isDmActive && !isDmPaused ? 'Pause audio' : 'Listen aloud'}
                 >
-                  <Volume2 className="w-4 h-4" />
-                  <span>{isDmRunning ? 'Playing' : 'Audio'}</span>
+                  <Volume2 className={`w-4 h-4 ${isDmActive && !isDmPaused ? 'animate-pulse' : ''}`} />
+                  <span>{isDmActive && !isDmPaused ? 'Playing' : 'Audio'}</span>
                 </button>
               </div>
 

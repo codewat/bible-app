@@ -14,6 +14,7 @@ class SpeechController {
     this.versesQueue = [];
     this.currentIndex = 0;
     this.onItemChangeCallback = null;
+    this.onCompleteCallback = null;
     this.voices = [];
     this.selectedVoiceURI = null;
     this.interPrayerPauseMs = 650; // Reverent breathing pause between Rosary beads
@@ -204,7 +205,7 @@ class SpeechController {
     this.playSingleVerse(verseObj);
   }
 
-  playSequence(items, startIndex = 0, onItemChange = null, options = {}) {
+  playSequence(items, startIndex = 0, onItemChange = null, options = {}, onComplete = null) {
     if (!this.synth) return;
     this.stop();
 
@@ -218,6 +219,7 @@ class SpeechController {
     this.versesQueue = items;
     this.currentIndex = startIndex;
     this.onItemChangeCallback = onItemChange;
+    this.onCompleteCallback = onComplete;
     this.isPlaying = true;
     this.isPaused = false;
     this.startKeepAlive();
@@ -310,6 +312,13 @@ class SpeechController {
 
   speakVerseAt(index) {
     if (!this.synth || index >= this.versesQueue.length) {
+      if (this.onCompleteCallback) {
+        try {
+          this.onCompleteCallback();
+        } catch (e) {
+          console.warn('onComplete error:', e);
+        }
+      }
       this.stop();
       return;
     }
@@ -397,6 +406,7 @@ class SpeechController {
     this.versesQueue = [];
     this.currentIndex = 0;
     this.onItemChangeCallback = null;
+    this.onCompleteCallback = null;
     if (this.onVerseChangeCallback) {
       this.onVerseChangeCallback(null);
     }
