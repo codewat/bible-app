@@ -25,6 +25,12 @@ function setStored(key, val) {
   }
 }
 
+export function saveMergedUserData({ bookmarks, highlights, notes }) {
+  if (bookmarks) setStored(STORAGE_KEYS.BOOKMARKS, bookmarks);
+  if (highlights) setStored(STORAGE_KEYS.HIGHLIGHTS, highlights);
+  if (notes) setStored(STORAGE_KEYS.NOTES, notes);
+}
+
 // Bookmarks: map of bookmarkId -> { id, bookId, bookName, chapter, verseNumbers, verseRange, text, color, note, feelings, savedAt }
 export function getBookmarks() {
   return getStored(STORAGE_KEYS.BOOKMARKS, {});

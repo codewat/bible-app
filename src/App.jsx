@@ -8,7 +8,14 @@ import SaveBookmarkModal from './components/SaveBookmarkModal';
 import JournalDrawer from './components/JournalDrawer';
 import AudioPlayerBar from './components/AudioPlayerBar';
 import PrayersModal from './components/PrayersModal';
+import AuthModal from './components/AuthModal';
 
+import { useAuth } from './context/AuthContext';
+import { 
+  performInitialSync, 
+  pushToCloud, 
+  startRealtimeCloudSync 
+} from './utils/cloudSync';
 import {
   getBookmarks,
   saveBookmarkWithDetails,
@@ -35,6 +42,10 @@ export default function App() {
 
   // Multi-verse selection state
   const [selectedVerses, setSelectedVerses] = useState([]);
+
+  // Authentication & Cloud Sync
+  const { user } = useAuth();
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   // Modals & Drawers state
   // "inig open sa app is mangutana siya 'how are you feeling today'" -> Starts open!
@@ -100,6 +111,31 @@ export default function App() {
       speechService.stop();
     };
   }, []);
+
+  // Handle Cloud Sync when user logs in or updates on another device
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    // Merge local data with cloud data on login
+    performInitialSync(user.uid).then((merged) => {
+      if (merged) {
+        setBookmarks(merged.bookmarks);
+        setHighlights(merged.highlights);
+        setNotes(merged.notes);
+      }
+    });
+
+    // Subscribe to real-time updates from other devices
+    const unsubscribe = startRealtimeCloudSync(user.uid, (cloudData) => {
+      if (cloudData) {
+        if (cloudData.bookmarks) setBookmarks(cloudData.bookmarks);
+        if (cloudData.highlights) setHighlights(cloudData.highlights);
+        if (cloudData.notes) setNotes(cloudData.notes);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   // Update HTML class for themes (Light, Sepia, Marian Blue, Midnight, Gethsemane Olive)
   useEffect(() => {
@@ -172,10 +208,21 @@ export default function App() {
   // Save Bookmark with highlight, reflection, and feelings
   const handleSaveBookmark = (bookmarkData) => {
     saveBookmarkWithDetails(bookmarkData);
-    setBookmarks(getBookmarks());
-    setHighlights(getHighlights());
-    setNotes(getNotes());
+    const updatedBookmarks = getBookmarks();
+    const updatedHighlights = getHighlights();
+    const updatedNotes = getNotes();
+    setBookmarks(updatedBookmarks);
+    setHighlights(updatedHighlights);
+    setNotes(updatedNotes);
     setSelectedVerses([]);
+
+    if (user?.uid) {
+      pushToCloud(user.uid, {
+        bookmarks: updatedBookmarks,
+        highlights: updatedHighlights,
+        notes: updatedNotes,
+      });
+    }
   };
 
   // Play Selected Verses
@@ -270,6 +317,7 @@ export default function App() {
         onOpenMood={() => setIsMoodOpen(true)}
         onOpenJournal={() => setIsJournalOpen(true)}
         onOpenPrayers={() => setIsPrayersOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
         onPlayChapterAudio={handlePlayChapterAudio}
         isPlayingAudio={audioState.isPlaying}
         theme={theme}
@@ -362,19 +410,35 @@ export default function App() {
         bookmarks={bookmarks}
         highlights={highlights}
         notes={notes}
+        onOpenAuth={() => setIsAuthOpen(true)}
         onRemoveBookmark={(bm) => {
-          removeBookmark(bm.id || `${bm.bookId}:${bm.chapter}:${bm.verseRange || bm.verse}`);
-          setBookmarks(getBookmarks());
+          const updated = removeBookmark(bm.id || `${bm.bookId}:${bm.chapter}:${bm.verseRange || bm.verse}`);
+          setBookmarks(updated);
+          if (user?.uid) {
+            pushToCloud(user.uid, { bookmarks: updated, highlights, notes });
+          }
         }}
         onRemoveHighlight={(bId, ch, v) => {
           const updated = setVerseHighlight(bId, ch, v, null);
           setHighlights(updated);
+          if (user?.uid) {
+            pushToCloud(user.uid, { bookmarks, highlights: updated, notes });
+          }
         }}
         onDeleteNote={(key) => {
           const updated = deleteVerseNote(key);
           setNotes(updated);
+          if (user?.uid) {
+            pushToCloud(user.uid, { bookmarks, highlights, notes: updated });
+          }
         }}
         onNavigateToVerse={handleNavigateToVerse}
+      />
+
+      {/* 7. Authentication & Cloud Sync Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
       />
     </div>
   );

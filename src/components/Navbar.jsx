@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, Search, Bookmark, Sparkles, Volume2, 
-  Settings, ChevronDown, Check, Download, X 
+  Settings, ChevronDown, Check, Download, X, User, Cloud 
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar({
   currentBookMeta,
@@ -12,6 +13,7 @@ export default function Navbar({
   onOpenMood,
   onOpenJournal,
   onOpenPrayers,
+  onOpenAuth,
   onPlayChapterAudio,
   isPlayingAudio,
   theme,
@@ -21,6 +23,7 @@ export default function Navbar({
   fontFamily,
   setFontFamily
 }) {
+  const { user } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -93,7 +96,7 @@ export default function Navbar({
             </button>
           </div>
 
-          {/* Mobile Right Controls: Feelings button moved to 1st row + Settings */}
+          {/* Mobile Right Controls: Feelings + Account + Settings */}
           <div className="sm:hidden flex items-center space-x-1.5">
             {/* Feelings Button on Row 1 (Mobile) */}
             <button
@@ -103,6 +106,22 @@ export default function Navbar({
             >
               <Sparkles className="w-3 h-3" />
               <span>Feelings</span>
+            </button>
+
+            {/* Account / Login Trigger (Mobile) */}
+            <button
+              onClick={onOpenAuth}
+              className="p-1.5 text-neutral-700 dark:text-neutral-300 hover:bg-amber-100/70 dark:hover:bg-neutral-800 rounded-xl transition relative"
+              title={user ? `Signed in as ${user.email}` : "Sign In / Cloud Sync"}
+            >
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="" className="w-5 h-5 rounded-full border border-amber-600" />
+              ) : (
+                <User className="w-5 h-5" />
+              )}
+              {user && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900" />
+              )}
             </button>
 
             {/* Settings Trigger for Mobile (Row 1) */}
@@ -171,6 +190,31 @@ export default function Navbar({
             <Bookmark className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Saved</span>
           </button>
+
+          {/* Desktop Account / Cloud Sync Button */}
+          <div className="hidden sm:block">
+            <button
+              onClick={onOpenAuth}
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition ${
+                user
+                  ? 'border-emerald-400/60 dark:border-emerald-700/60 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 hover:bg-emerald-100/80'
+                  : 'border-neutral-200 dark:border-neutral-700 bg-neutral-100/80 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 hover:bg-amber-100/70'
+              }`}
+              title={user ? `Signed in as ${user.email} (Cloud Sync Active)` : "Log In / Sync Bookmarks"}
+            >
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="" className="w-4 h-4 rounded-full" />
+              ) : (
+                <User className="w-3.5 h-3.5" />
+              )}
+              <span className="max-w-[85px] truncate">
+                {user ? (user.displayName?.split(' ')[0] || 'Account') : 'Sign In'}
+              </span>
+              {user && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              )}
+            </button>
+          </div>
 
           {/* Desktop Settings Button (Hidden on Mobile since it's on Row 1) */}
           <div className="hidden sm:block relative">

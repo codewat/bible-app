@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Bookmark, Check, Palette, Sparkles, MessageSquare, Heart } from 'lucide-react';
+import { X, Bookmark, Check, Palette, Sparkles, MessageSquare, Heart, Cloud } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const FEELING_OPTIONS = [
   { id: 'peaceful', label: 'Peaceful / Calm', emoji: '🕊️' },
@@ -30,6 +31,7 @@ export default function SaveBookmarkModal({
   chapter,
   onSaveBookmark
 }) {
+  const { user } = useAuth();
   const [selectedColor, setSelectedColor] = useState('yellow');
   const [selectedFeelings, setSelectedFeelings] = useState([]);
   const [reflectionNote, setReflectionNote] = useState('');
@@ -216,12 +218,20 @@ export default function SaveBookmarkModal({
 
         {/* Footer Actions */}
         <div className="px-5 py-3.5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60 flex items-center justify-between">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-xs sm:text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition"
-          >
-            Cancel
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={onClose}
+              className="px-3 py-2 text-xs sm:text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition"
+            >
+              Cancel
+            </button>
+            {user && (
+              <span className="hidden sm:inline-flex items-center space-x-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                <Cloud className="w-3.5 h-3.5" />
+                <span>Syncs to cloud</span>
+              </span>
+            )}
+          </div>
 
           <button
             onClick={handleSave}
