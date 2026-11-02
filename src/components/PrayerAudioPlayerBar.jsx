@@ -29,16 +29,12 @@ export default function PrayerAudioPlayerBar({
   const stepText = isRosary ? rosaryStepTitle : dmStepTitle;
   const icon = isRosary ? '📿' : '✝️';
 
-  const bottomClass = hasBiblePlayerVisible 
-    ? 'bottom-20 sm:bottom-22' 
-    : 'bottom-4';
-
   const themeGradient = isRosary
     ? 'from-amber-900 via-amber-800 to-amber-950 border-amber-600/50 shadow-amber-950/40'
     : 'from-rose-950 via-red-900 to-amber-950 border-rose-600/50 shadow-rose-950/40';
 
   return (
-    <div className={`fixed ${bottomClass} left-1/2 -translate-x-1/2 z-40 w-11/12 max-w-xl bg-gradient-to-r ${themeGradient} text-white backdrop-blur-md rounded-2xl shadow-2xl border p-2.5 sm:px-4 sm:py-3 flex items-center justify-between transition-all duration-300 animate-slideUp`}>
+    <div className={`w-full max-w-xl bg-gradient-to-r ${themeGradient} text-white backdrop-blur-md rounded-2xl shadow-2xl border p-2.5 sm:px-4 sm:py-3 flex items-center justify-between transition-all duration-300 animate-slideDown pointer-events-auto`}>
       {/* Prayer Details (clickable to open full prayer modal) */}
       <div 
         onClick={onOpenPrayers}

@@ -343,27 +343,83 @@ export default function App() {
     }
   };
 
+  const isScriptureAudioActive = (audioState.isPlaying || audioState.isPaused) && audioState.mode === 'bible';
+  const isPrayerAudioActive = !isPrayersOpen && (prayerAudioState.isRosaryActive || prayerAudioState.isDmActive);
+  const hasAnyAudioActive = isScriptureAudioActive || isPrayerAudioActive;
+
   return (
     <div className="min-h-screen flex flex-col font-sans transition-colors duration-200">
-      {/* Top Navigation */}
-      <Navbar
-        currentBookMeta={currentBookMeta}
-        currentChapter={currentChapter}
-        onOpenBookPicker={() => setIsBookPickerOpen(true)}
-        onOpenSearch={() => setIsSearchOpen(true)}
-        onOpenMood={() => setIsMoodOpen(true)}
-        onOpenJournal={() => setIsJournalOpen(true)}
-        onOpenPrayers={() => setIsPrayersOpen(true)}
-        onOpenAuth={() => setIsAuthOpen(true)}
-        onPlayChapterAudio={handlePlayChapterAudio}
-        isPlayingAudio={audioState.isPlaying}
-        theme={theme}
-        setTheme={setTheme}
-        fontSize={fontSize}
-        setFontSize={setFontSize}
-        fontFamily={fontFamily}
-        setFontFamily={setFontFamily}
-      />
+      {/* Sticky Top Header: Navbar + Hovering Audio Player Bars underneath */}
+      <div className="sticky top-0 z-30">
+        <Navbar
+          currentBookMeta={currentBookMeta}
+          currentChapter={currentChapter}
+          onOpenBookPicker={() => setIsBookPickerOpen(true)}
+          onOpenSearch={() => setIsSearchOpen(true)}
+          onOpenMood={() => setIsMoodOpen(true)}
+          onOpenJournal={() => setIsJournalOpen(true)}
+          onOpenPrayers={() => setIsPrayersOpen(true)}
+          onOpenAuth={() => setIsAuthOpen(true)}
+          onPlayChapterAudio={handlePlayChapterAudio}
+          isPlayingAudio={audioState.isPlaying}
+          theme={theme}
+          setTheme={setTheme}
+          fontSize={fontSize}
+          setFontSize={setFontSize}
+          fontFamily={fontFamily}
+          setFontFamily={setFontFamily}
+        />
+
+        {/* Floating / Hovering Audio Player Bars directly under Navbar */}
+        {hasAnyAudioActive && (
+          <div className="relative w-full">
+            <div className="absolute top-2.5 inset-x-0 flex flex-col items-center space-y-2 px-3 sm:px-4 pointer-events-none z-40">
+              {/* Scripture Audio Bar when active */}
+              {isScriptureAudioActive && (
+                <AudioPlayerBar
+                  audioState={audioState}
+                  currentVerseSpeaking={currentVerseSpeaking}
+                  bookName={currentBookMeta?.modernName || ''}
+                  chapter={currentChapter}
+                  onStopAudio={() => speechService.stop()}
+                />
+              )}
+
+              {/* Prayer Audio Bar (Holy Rosary / Divine Mercy) when active */}
+              {isPrayerAudioActive && (
+                <PrayerAudioPlayerBar
+                  isRosaryActive={prayerAudioState.isRosaryActive}
+                  isRosaryPaused={prayerAudioState.isRosaryPaused}
+                  rosaryStepTitle={prayerAudioState.rosaryStepTitle}
+                  audioRosaryIndex={prayerAudioState.audioRosaryIndex}
+                  totalRosarySteps={prayerAudioState.totalRosarySteps}
+                  isDmActive={prayerAudioState.isDmActive}
+                  isDmPaused={prayerAudioState.isDmPaused}
+                  dmStepTitle={prayerAudioState.dmStepTitle}
+                  audioDmIndex={prayerAudioState.audioDmIndex}
+                  totalDmSteps={prayerAudioState.totalDmSteps}
+                  onPrev={() => {
+                    if (prayerAudioState.isRosaryActive) prayerAudioControlsRef.current?.prevRosary();
+                    else prayerAudioControlsRef.current?.prevDm();
+                  }}
+                  onNext={() => {
+                    if (prayerAudioState.isRosaryActive) prayerAudioControlsRef.current?.nextRosary();
+                    else prayerAudioControlsRef.current?.nextDm();
+                  }}
+                  onPauseResume={() => {
+                    if (prayerAudioState.isRosaryActive) prayerAudioControlsRef.current?.pauseResumeRosary();
+                    else prayerAudioControlsRef.current?.pauseResumeDm();
+                  }}
+                  onStop={() => {
+                    prayerAudioControlsRef.current?.stopAudio();
+                  }}
+                  onOpenPrayers={() => setIsPrayersOpen(true)}
+                />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Main Bible Reader */}
       <div className="flex-1">
@@ -388,50 +444,6 @@ export default function App() {
           hasNext={hasNext}
         />
       </div>
-
-      {/* Floating Audio Bar when scripture audio is active */}
-      <AudioPlayerBar
-        audioState={audioState}
-        currentVerseSpeaking={currentVerseSpeaking}
-        bookName={currentBookMeta?.modernName || ''}
-        chapter={currentChapter}
-        onStopAudio={() => speechService.stop()}
-      />
-
-      {/* Floating Audio Prayer Bar (Holy Rosary / Divine Mercy) while in Bible scriptures */}
-      {!isPrayersOpen && (prayerAudioState.isRosaryActive || prayerAudioState.isDmActive) && (
-        <PrayerAudioPlayerBar
-          isRosaryActive={prayerAudioState.isRosaryActive}
-          isRosaryPaused={prayerAudioState.isRosaryPaused}
-          rosaryStepTitle={prayerAudioState.rosaryStepTitle}
-          audioRosaryIndex={prayerAudioState.audioRosaryIndex}
-          totalRosarySteps={prayerAudioState.totalRosarySteps}
-          isDmActive={prayerAudioState.isDmActive}
-          isDmPaused={prayerAudioState.isDmPaused}
-          dmStepTitle={prayerAudioState.dmStepTitle}
-          audioDmIndex={prayerAudioState.audioDmIndex}
-          totalDmSteps={prayerAudioState.totalDmSteps}
-          onPrev={() => {
-            if (prayerAudioState.isRosaryActive) prayerAudioControlsRef.current?.prevRosary();
-            else prayerAudioControlsRef.current?.prevDm();
-          }}
-          onNext={() => {
-            if (prayerAudioState.isRosaryActive) prayerAudioControlsRef.current?.nextRosary();
-            else prayerAudioControlsRef.current?.nextDm();
-          }}
-          onPauseResume={() => {
-            if (prayerAudioState.isRosaryActive) prayerAudioControlsRef.current?.pauseResumeRosary();
-            else prayerAudioControlsRef.current?.pauseResumeDm();
-          }}
-          onStop={() => {
-            prayerAudioControlsRef.current?.stopAudio();
-          }}
-          onOpenPrayers={() => setIsPrayersOpen(true)}
-          hasBiblePlayerVisible={
-            (audioState.isPlaying || audioState.isPaused) && audioState.mode === 'bible'
-          }
-        />
-      )}
 
       {/* 1. "How are you feeling today?" Welcome / Mood Modal */}
       <MoodModal

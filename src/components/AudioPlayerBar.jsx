@@ -29,7 +29,7 @@ export default function AudioPlayerBar({
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-11/12 max-w-xl bg-neutral-900/95 dark:bg-neutral-800/95 text-white backdrop-blur-md rounded-2xl shadow-2xl border border-neutral-700/60 p-3 sm:px-5 sm:py-3.5 flex items-center justify-between animate-slideUp">
+    <div className="w-full max-w-xl bg-neutral-900/95 dark:bg-neutral-800/95 text-white backdrop-blur-md rounded-2xl shadow-2xl border border-neutral-700/60 p-2.5 sm:px-4 sm:py-3 flex items-center justify-between animate-slideDown pointer-events-auto">
       {/* Current verse info */}
       <div className="flex items-center space-x-3 min-w-0 flex-1 mr-3">
         <div className="p-2 rounded-xl bg-amber-600/30 text-amber-400 shrink-0">

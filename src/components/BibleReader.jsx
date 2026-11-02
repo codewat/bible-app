@@ -78,7 +78,7 @@ export default function BibleReader({
   };
 
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-36 relative">
+    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 relative">
       {/* Chapter Title & Header */}
       <div className="text-center mb-8 pb-6 border-b border-amber-900/10 dark:border-amber-500/10">
         <div className="flex items-center justify-center space-x-2 mb-2">
