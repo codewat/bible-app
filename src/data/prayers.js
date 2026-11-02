@@ -291,7 +291,7 @@ export function buildRosarySequence(mysteryKey = 'joyful') {
     title: "The Apostles' Creed",
     latinTitle: 'Symbolum Apostolorum',
     text: `In the name of the Father, and of the Son, and of the Holy Ghost. Amen.\n\nI believe in God, the Father Almighty, Creator of heaven and earth; and in Jesus Christ, His only Son, our Lord; who was conceived by the Holy Ghost, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died, and was buried. He descended into hell; the third day He arose again from the dead; He ascended into heaven, and sitteth at the right hand of God the Father Almighty; from thence He shall come to judge the living and the dead. I believe in the Holy Ghost, the Holy Catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen.`,
-    speechText: `In the name of the Father, and of the Son, and of the Holy Ghost. Amen. I believe in God, the Father Almighty, Creator of heaven and earth; and in Jesus Christ, His only Son, our Lord; who was conceived by the Holy Ghost, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died, and was buried. He descended into hell; the third day He arose again from the dead; He ascended into heaven, and sitteth at the right hand of God the Father Almighty; from thence He shall come to judge the living and the dead. I believe in the Holy Ghost, the Holy Catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen.`
+    speechText: `In the name of the Father, and of the Son, and of the Holy Ghost. Amen... I believe in God, the Father Almighty, Creator of heaven and earth. And in Jesus Christ, His only Son, our Lord... Who was conceived by the Holy Ghost, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died, and was buried. He descended into hell. The third day He arose again from the dead... He ascended into heaven, and sitteth at the right hand of God the Father Almighty. From thence He shall come to judge the living and the dead... I believe in the Holy Ghost, the Holy Catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen.`
   });
 
   // Step 1: Opening Our Father
@@ -307,7 +307,7 @@ export function buildRosarySequence(mysteryKey = 'joyful') {
     title: "The Lord's Prayer (Our Father)",
     latinTitle: 'Pater Noster',
     text: `Our Father, who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven.\n\nGive us this day our daily bread; and forgive us our trespasses as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.`,
-    speechText: `Our Father, who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.`
+    speechText: `Our Father, who art in heaven, hallowed be Thy name. Thy kingdom come, Thy will be done, on earth as it is in heaven... Give us this day our daily bread. And forgive us our trespasses, as we forgive those who trespass against us... And lead us not into temptation, but deliver us from evil. Amen.`
   });
 
   // Steps 2-4: Three Hail Marys (Faith, Hope, Charity)
@@ -330,7 +330,7 @@ export function buildRosarySequence(mysteryKey = 'joyful') {
       title: `Hail Mary (For ${item.virtue})`,
       latinTitle: `Ave Maria • Bead ${item.num} of 3`,
       text: `Hail Mary, full of grace, the Lord is with thee; blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus.\n\nHoly Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.`,
-      speechText: `Hail Mary, full of grace, the Lord is with thee; blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.`
+      speechText: `Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus... Holy Mary, Mother of God, pray for us sinners, now, and at the hour of our death. Amen.`
     });
   });
 
@@ -347,7 +347,7 @@ export function buildRosarySequence(mysteryKey = 'joyful') {
     title: 'Glory Be to the Father',
     latinTitle: 'Gloria Patri',
     text: `Glory be to the Father, and to the Son, and to the Holy Ghost. As it was in the beginning, is now, and ever shall be, world without end. Amen.`,
-    speechText: `Glory be to the Father, and to the Son, and to the Holy Ghost. As it was in the beginning, is now, and ever shall be, world without end. Amen.`
+    speechText: `Glory be to the Father, and to the Son, and to the Holy Ghost... As it was in the beginning, is now, and ever shall be, world without end. Amen.`
   });
 
   // Decades 1 to 5
@@ -369,7 +369,7 @@ export function buildRosarySequence(mysteryKey = 'joyful') {
       scripture: dec.scripture,
       meditation: dec.meditation,
       text: `Decade ${dIdx + 1}: ${dec.title}\n\n🕊️ Spiritual Fruit: ${dec.fruit}\n\n"${dec.scripture}"\n\nMeditation:\n${dec.meditation}`,
-      speechText: `The ${dIdx === 0 ? 'First' : dIdx === 1 ? 'Second' : dIdx === 2 ? 'Third' : dIdx === 3 ? 'Fourth' : 'Fifth'} Mystery: ${dec.title}. Spiritual Fruit: ${dec.fruit}. ${dec.meditation}`
+      speechText: `The ${dIdx === 0 ? 'First' : dIdx === 1 ? 'Second' : dIdx === 2 ? 'Third' : dIdx === 3 ? 'Fourth' : 'Fifth'} Mystery: ${dec.title}... Spiritual Fruit: ${dec.fruit}... Meditation: ${dec.meditation}`
     });
 
     // 2. Decade Our Father Bead
@@ -385,7 +385,7 @@ export function buildRosarySequence(mysteryKey = 'joyful') {
       title: "The Lord's Prayer (Our Father)",
       latinTitle: 'Pater Noster',
       text: `Our Father, who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven.\n\nGive us this day our daily bread; and forgive us our trespasses as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.`,
-      speechText: `Our Father, who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.`
+      speechText: `Our Father, who art in heaven, hallowed be Thy name. Thy kingdom come, Thy will be done, on earth as it is in heaven... Give us this day our daily bread. And forgive us our trespasses, as we forgive those who trespass against us... And lead us not into temptation, but deliver us from evil. Amen.`
     });
 
     // 3. 10 Hail Mary Beads
@@ -402,7 +402,7 @@ export function buildRosarySequence(mysteryKey = 'joyful') {
         title: 'Hail Mary',
         latinTitle: `Ave Maria • Bead ${h} of 10`,
         text: `Hail Mary, full of grace, the Lord is with thee; blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus.\n\nHoly Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.`,
-        speechText: `Hail Mary, full of grace, the Lord is with thee; blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.`
+        speechText: `Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus... Holy Mary, Mother of God, pray for us sinners, now, and at the hour of our death. Amen.`
       });
     }
 
@@ -426,7 +426,7 @@ export function buildRosarySequence(mysteryKey = 'joyful') {
       secondLatinTitle: 'O My Jesus',
       secondText: `O My Jesus, forgive us our sins, save us from the fires of hell, lead all souls to Heaven, especially those most in need of Thy mercy. Amen.`,
       text: `1. Glory Be to the Father\nGlory be to the Father, and to the Son, and to the Holy Ghost. As it was in the beginning, is now, and ever shall be, world without end. Amen.\n\n2. The Fatima Prayer\nO My Jesus, forgive us our sins, save us from the fires of hell, lead all souls to Heaven, especially those most in need of Thy mercy. Amen.`,
-      speechText: `Glory be to the Father, and to the Son, and to the Holy Ghost. As it was in the beginning, is now, and ever shall be, world without end. Amen. O My Jesus, forgive us our sins, save us from the fires of hell, lead all souls to Heaven, especially those most in need of Thy mercy. Amen.`
+      speechText: `Glory be to the Father, and to the Son, and to the Holy Ghost... As it was in the beginning, is now, and ever shall be, world without end. Amen... O My Jesus, forgive us our sins. Save us from the fires of hell. Lead all souls to Heaven, especially those most in need of Thy mercy. Amen.`
     });
   });
 
@@ -442,7 +442,7 @@ export function buildRosarySequence(mysteryKey = 'joyful') {
     title: 'Hail, Holy Queen',
     latinTitle: 'Salve Regina',
     text: `Hail, Holy Queen, Mother of Mercy, our life, our sweetness, and our hope! To thee do we cry, poor banished children of Eve; to thee do we send up our sighs, mourning and weeping in this valley of tears. Turn then, most gracious advocate, thine eyes of mercy toward us; and after this our exile, show unto us the blessed fruit of thy womb, Jesus. O clement, O loving, O sweet Virgin Mary.\n\nV. Pray for us, O Holy Mother of God.\nR. That we may be made worthy of the promises of Christ.`,
-    speechText: `Hail, Holy Queen, Mother of Mercy, our life, our sweetness, and our hope! To thee do we cry, poor banished children of Eve; to thee do we send up our sighs, mourning and weeping in this valley of tears. Turn then, most gracious advocate, thine eyes of mercy toward us; and after this our exile, show unto us the blessed fruit of thy womb, Jesus. O clement, O loving, O sweet Virgin Mary. Pray for us, O Holy Mother of God, that we may be made worthy of the promises of Christ.`
+    speechText: `Hail, Holy Queen, Mother of Mercy, our life, our sweetness, and our hope... To thee do we cry, poor banished children of Eve. To thee do we send up our sighs, mourning and weeping in this valley of tears... Turn then, most gracious advocate, thine eyes of mercy toward us. And after this our exile, show unto us the blessed fruit of thy womb, Jesus... O clement, O loving, O sweet Virgin Mary... Pray for us, O Holy Mother of God, that we may be made worthy of the promises of Christ.`
   });
 
   // Concluding Collect
@@ -456,7 +456,7 @@ export function buildRosarySequence(mysteryKey = 'joyful') {
     title: 'Rosary Concluding Prayer',
     latinTitle: 'Oratio Conclusiva',
     text: `O God, whose only begotten Son, by His life, death, and resurrection, has purchased for us the rewards of eternal salvation; grant, we beseech Thee, that meditating upon these mysteries of the Most Holy Rosary of the Blessed Virgin Mary, we may imitate what they contain and obtain what they promise, through the same Christ our Lord. Amen.\n\nIn the name of the Father, and of the Son, and of the Holy Ghost. Amen.`,
-    speechText: `Let us pray: O God, whose only begotten Son, by His life, death, and resurrection, has purchased for us the rewards of eternal salvation; grant, we beseech Thee, that meditating upon these mysteries of the Most Holy Rosary of the Blessed Virgin Mary, we may imitate what they contain and obtain what they promise, through the same Christ our Lord. Amen. In the name of the Father, and of the Son, and of the Holy Ghost. Amen.`
+    speechText: `Let us pray: O God, whose only begotten Son, by His life, death, and resurrection, has purchased for us the rewards of eternal salvation... Grant, we beseech Thee, that meditating upon these mysteries of the Most Holy Rosary of the Blessed Virgin Mary, we may imitate what they contain, and obtain what they promise, through the same Christ our Lord. Amen... In the name of the Father, and of the Son, and of the Holy Ghost. Amen.`
   });
 
   return sequence;

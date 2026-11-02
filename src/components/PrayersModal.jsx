@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  X, Volume2, Sparkles, ChevronRight, ChevronLeft, 
-  RotateCcw, Check, BookOpen, Heart, Shield,
+  X, Volume2, Sparkles, ChevronRight, ChevronLeft, ChevronDown,
+  RotateCcw, Check, BookOpen, Heart, Shield, Sliders,
   Play, Pause, Square, SkipForward, SkipBack
 } from 'lucide-react';
 import { 
@@ -33,12 +33,42 @@ export default function PrayersModal({ isOpen, onClose }) {
   const [isAudioRunning, setIsAudioRunning] = useState(false);
   const [isAudioPaused, setIsAudioPaused] = useState(false);
 
+  // Relaxing Voice & Cadence Settings
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState(speechService.getSelectedVoiceURI() || '');
+  const [rosaryRate, setRosaryRate] = useState(() => {
+    try {
+      return localStorage.getItem('catholic_bible_rosary_rate') || '0.85';
+    } catch {
+      return '0.85';
+    }
+  });
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+
   // Traditional Prayers State
   const [selectedPrayerId, setSelectedPrayerId] = useState(null);
   const [prayerCategory, setPrayerCategory] = useState('ALL');
 
-  // Keep speechService state in sync
+  // Load voices and keep speechService state in sync
   useEffect(() => {
+    const updateVoices = () => {
+      const vList = speechService.getEnglishVoices();
+      setAvailableVoices(vList);
+      const currentURI = speechService.getSelectedVoiceURI();
+      if (!currentURI && vList.length > 0) {
+        const best = speechService.getBestEnglishVoice();
+        if (best) {
+          setSelectedVoiceURI(best.voiceURI);
+          speechService.setSelectedVoiceURI(best.voiceURI);
+        }
+      }
+    };
+
+    updateVoices();
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = updateVoices;
+    }
+
     const unsubscribe = speechService.addStateListener((state) => {
       setIsAudioRunning(state.isPlaying);
       setIsAudioPaused(state.isPaused);
@@ -63,7 +93,7 @@ export default function PrayersModal({ isOpen, onClose }) {
     currentSection.endIndex + 1
   );
 
-  // Starts continuous audio from given index (or current step)
+  // Starts continuous audio from given index (or current step) with relaxing voice & prayerful pace
   const handleStartRosary = (startIdx = null) => {
     speechService.stop();
     const targetIdx = typeof startIdx === 'number' ? startIdx : stepIndex;
@@ -71,10 +101,21 @@ export default function PrayersModal({ isOpen, onClose }) {
     setIsAudioRunning(true);
     setIsAudioPaused(false);
 
+    const parsedRate = parseFloat(rosaryRate) || 0.85;
+    speechService.setRate(parsedRate);
+    if (selectedVoiceURI) {
+      speechService.setSelectedVoiceURI(selectedVoiceURI);
+    }
+
     const items = rosarySequence.map(s => ({ text: s.speechText, lang: 'en-US' }));
     speechService.playSequence(items, targetIdx, (item, idx) => {
       setStepIndex(idx);
-    });
+    }, { rate: parsedRate, voiceURI: selectedVoiceURI });
+  };
+
+  const handleTestVoice = () => {
+    const parsedRate = parseFloat(rosaryRate) || 0.85;
+    speechService.previewVoice(selectedVoiceURI, parsedRate);
   };
 
   const handlePauseResume = () => {
@@ -354,6 +395,101 @@ export default function PrayersModal({ isOpen, onClose }) {
                   </div>
                 </div>
               )}
+
+              {/* Voice & Pacing Settings Accordion */}
+              <div className="pt-2.5 mt-2.5 border-t border-white/15">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setShowVoiceSettings(!showVoiceSettings)}
+                    className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-black/25 hover:bg-black/35 text-amber-200 hover:text-white transition text-[11px] font-medium"
+                  >
+                    <Sliders className="w-3.5 h-3.5" />
+                    <span>🕊️ Relaxing Voice & Pace</span>
+                    <ChevronDown className={`w-3 h-3 transition-transform ${showVoiceSettings ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <div className="flex items-center space-x-1.5 text-[11px] text-amber-200/90 font-medium">
+                    <span className="hidden sm:inline">Cadence:</span>
+                    <span className="px-1.5 py-0.5 rounded bg-black/20 text-amber-300 font-mono">
+                      {rosaryRate === '0.85' ? '0.85x (Gentle)' : rosaryRate === '0.78' ? '0.78x (Deep)' : `${rosaryRate}x`}
+                    </span>
+                  </div>
+                </div>
+
+                {showVoiceSettings && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-black/35 border border-white/10 space-y-3 animate-fadeIn text-xs">
+                    {/* Voice Selector */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-amber-200">
+                        <span>Select Voice on your Device:</span>
+                        <button
+                          type="button"
+                          onClick={handleTestVoice}
+                          className="px-2 py-0.5 rounded-lg bg-white/20 hover:bg-white/30 text-white font-medium text-[10px] transition flex items-center space-x-1"
+                          title="Preview prayer in this voice"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                          <span>▶ Test Voice</span>
+                        </button>
+                      </div>
+                      <select
+                        value={selectedVoiceURI}
+                        onChange={(e) => {
+                          setSelectedVoiceURI(e.target.value);
+                          speechService.setSelectedVoiceURI(e.target.value);
+                        }}
+                        className="w-full p-2 rounded-xl bg-neutral-900 border border-amber-500/40 text-neutral-100 text-xs focus:ring-2 focus:ring-amber-400 outline-hidden font-sans"
+                      >
+                        {availableVoices.length === 0 ? (
+                          <option value="">Device Default Natural Voice</option>
+                        ) : (
+                          availableVoices.map((v) => (
+                            <option key={v.voiceURI || v.name} value={v.voiceURI || v.name}>
+                              {v.badge ? `${v.badge} • ${v.name}` : v.name}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                      <p className="text-[10px] text-amber-200/70 italic">
+                        Tip: Look for voices with "Natural", "Google", "Siri", "Jenny", "Samantha", or "Enhanced" for the most human-like, peaceful recitation.
+                      </p>
+                    </div>
+
+                    {/* Cadence / Pacing Selector */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-semibold text-amber-200">
+                        Prayer Cadence & Speed:
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: '0.85', label: '🕊️ Gentle (0.85x)', sub: 'Calm & Reverent' },
+                          { id: '0.78', label: '🕊️ Deep (0.78x)', sub: 'Meditative' },
+                          { id: '1.0', label: 'Standard (1.0x)', sub: 'Brisk' },
+                        ].map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setRosaryRate(p.id);
+                              try { localStorage.setItem('catholic_bible_rosary_rate', p.id); } catch {}
+                              speechService.setRate(parseFloat(p.id));
+                            }}
+                            className={`p-2 rounded-xl border text-center transition ${
+                              rosaryRate === p.id
+                                ? 'bg-amber-400 text-amber-950 border-amber-400 font-bold shadow-sm'
+                                : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
+                            }`}
+                          >
+                            <div className="text-[11px] font-bold">{p.label}</div>
+                            <div className="text-[9px] opacity-80 mt-0.5">{p.sub}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Section Switcher Pills */}
