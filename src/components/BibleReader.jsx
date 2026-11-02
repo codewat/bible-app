@@ -146,29 +146,58 @@ export default function BibleReader({
                   : 'hover:bg-black/5 dark:hover:bg-white/5'
               } ${isSpeaking ? 'verse-speaking' : ''}`}
             >
-              {/* Verse Text with Number */}
-              <div className="flex items-baseline space-x-2.5 text-neutral-900 dark:text-neutral-100">
-                <span className={`inline-flex items-center justify-center font-mono text-xs font-bold rounded px-1.5 py-0.5 transition shrink-0 ${
-                  isSelected 
-                    ? 'bg-amber-700 text-white shadow-xs' 
-                    : 'text-amber-800 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 group-hover:bg-amber-200'
-                }`}>
-                  {isSelected ? <Check className="w-3 h-3" /> : v.verse}
-                </span>
+              {/* Verse Text with Number and Inline Side Action Buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 text-neutral-900 dark:text-neutral-100">
+                <div className="flex items-baseline space-x-2.5 flex-1 min-w-0">
+                  <span className={`inline-flex items-center justify-center font-mono text-xs font-bold rounded px-1.5 py-0.5 transition shrink-0 ${
+                    isSelected 
+                      ? 'bg-amber-700 text-white shadow-xs' 
+                      : 'text-amber-800 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 group-hover:bg-amber-200'
+                  }`}>
+                    {isSelected ? <Check className="w-3 h-3" /> : v.verse}
+                  </span>
 
-                <span className="flex-1">
-                  {v.text}
-                </span>
+                  <span className="flex-1">
+                    {v.text}
+                  </span>
 
-                {/* Indicators: Bookmark, Note */}
-                <div className="flex items-center space-x-1 shrink-0 ml-1">
-                  {isBm && (
-                    <Bookmark className="w-3.5 h-3.5 fill-amber-600 text-amber-600" title="Bookmarked" />
-                  )}
-                  {note && (
-                    <MessageSquare className="w-3.5 h-3.5 fill-amber-500/30 text-amber-700 dark:text-amber-300" title="Has Reflection Note" />
-                  )}
+                  {/* Indicators: Bookmark, Note */}
+                  <div className="flex items-center space-x-1 shrink-0 ml-1">
+                    {isBm && (
+                      <Bookmark className="w-3.5 h-3.5 fill-amber-600 text-amber-600" title="Bookmarked" />
+                    )}
+                    {note && (
+                      <MessageSquare className="w-3.5 h-3.5 fill-amber-500/30 text-amber-700 dark:text-amber-300" title="Has Reflection Note" />
+                    )}
+                  </div>
                 </div>
+
+                {/* Inline Side Action Buttons on verse click: Read and Bookmark */}
+                {isSelected && (
+                  <div 
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center space-x-1.5 shrink-0 self-end sm:self-start bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm p-1 rounded-xl shadow-lg border border-amber-300 dark:border-amber-700/80 animate-fadeIn z-20"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onPlaySelectedVerses(selectedVerses.length > 1 ? sortedSelected : [v])}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-amber-700 hover:bg-amber-800 text-white font-semibold text-xs shadow-xs transition active:scale-95 cursor-pointer"
+                      title="Read verse aloud"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                      <span>Read</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onOpenSaveBookmarkModal}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-xs shadow-xs transition active:scale-95 cursor-pointer"
+                      title="Save to Bookmark"
+                    >
+                      <Bookmark className="w-3.5 h-3.5 fill-white" />
+                      <span>Bookmark</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Feelings badges if saved in bookmark */}

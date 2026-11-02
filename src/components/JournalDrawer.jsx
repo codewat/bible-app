@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { 
   X, Bookmark, Highlighter, MessageSquare, Trash2, 
-  ChevronRight, Download, BookOpen, Heart, Cloud, LogIn 
+  ChevronRight, Download, BookOpen, Heart, Cloud, LogIn, Folder 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getBookmarkGroups } from '../utils/storage';
 
 export default function JournalDrawer({
   isOpen,
@@ -19,12 +20,23 @@ export default function JournalDrawer({
 }) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('bookmarks'); // 'bookmarks' | 'notes' | 'highlights'
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState('ALL');
 
   if (!isOpen) return null;
 
   const bookmarkList = Object.values(bookmarks);
   const noteList = Object.values(notes);
   const highlightList = Object.values(highlights);
+
+  // Available groups for bookmarks
+  const allGroups = Array.from(new Set([
+    ...getBookmarkGroups(),
+    ...bookmarkList.map(b => b.group || 'General')
+  ]));
+
+  const filteredBookmarks = selectedGroupFilter === 'ALL'
+    ? bookmarkList
+    : bookmarkList.filter(b => (b.group || 'General') === selectedGroupFilter);
 
   const handleExportData = () => {
     const data = {
@@ -43,9 +55,12 @@ export default function JournalDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-xs animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-fadeIn"
+      onClick={onClose}
+    >
       <div 
-        className="w-full sm:max-w-md bg-white dark:bg-[#1a1917] h-full shadow-2xl border-l border-neutral-200 dark:border-neutral-800 flex flex-col animate-slideLeft"
+        className="relative w-full max-w-2xl bg-white dark:bg-[#1a1917] rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 max-h-[88vh] flex flex-col overflow-hidden animate-slideUp sm:animate-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -140,72 +155,123 @@ export default function JournalDrawer({
         {/* Tab contents */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {activeTab === 'bookmarks' && (
-            bookmarkList.length === 0 ? (
-              <div className="py-16 text-center text-sm text-neutral-400">
-                <Bookmark className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                No bookmarks yet. Click any verse or combine multiple verses to save them!
-              </div>
-            ) : (
-              bookmarkList.map((bm) => {
-                const firstVerse = bm.verseNumbers?.[0] || bm.verse || 1;
-                const rangeLabel = bm.verseRange || bm.verse;
-                return (
-                  <div
-                    key={bm.id || `${bm.bookId}:${bm.chapter}:${rangeLabel}`}
-                    className="p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/30 hover:border-amber-300 dark:hover:border-amber-700/60 transition group space-y-2"
+            <>
+              {/* Group Filter Chips Bar */}
+              {allGroups.length > 0 && bookmarkList.length > 0 && (
+                <div className="flex items-center space-x-1.5 overflow-x-auto pb-1.5 text-xs scrollbar-none">
+                  <span className="text-[11px] font-semibold text-neutral-500 shrink-0">Group:</span>
+                  <button
+                    onClick={() => setSelectedGroupFilter('ALL')}
+                    className={`px-3 py-1 rounded-full font-medium shrink-0 transition cursor-pointer ${
+                      selectedGroupFilter === 'ALL'
+                        ? 'bg-amber-700 text-white font-semibold shadow-xs'
+                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200'
+                    }`}
                   >
-                    <div className="flex items-center justify-between">
+                    All ({bookmarkList.length})
+                  </button>
+                  {allGroups.map((grp) => {
+                    const count = bookmarkList.filter((b) => (b.group || 'General') === grp).length;
+                    return (
                       <button
-                        onClick={() => {
-                          onNavigateToVerse(bm.bookId, bm.chapter, firstVerse);
-                          onClose();
-                        }}
-                        className="font-serif font-bold text-xs sm:text-sm text-amber-800 dark:text-amber-300 hover:underline flex items-center"
+                        key={grp}
+                        onClick={() => setSelectedGroupFilter(grp)}
+                        className={`px-3 py-1 rounded-full font-medium shrink-0 transition flex items-center space-x-1 cursor-pointer ${
+                          selectedGroupFilter === grp
+                            ? 'bg-amber-700 text-white font-semibold shadow-xs'
+                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200'
+                        }`}
                       >
-                        <span>{bm.bookName} {bm.chapter}:{rangeLabel}</span>
-                        <ChevronRight className="w-3.5 h-3.5 ml-1 inline text-neutral-400" />
+                        <span>📁</span>
+                        <span>{grp}</span>
+                        <span className="text-[10px] opacity-75">({count})</span>
                       </button>
-                      <button
-                        onClick={() => onRemoveBookmark(bm)}
-                        className="text-neutral-400 hover:text-rose-500 p-1 rounded transition"
-                        title="Remove bookmark"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    );
+                  })}
+                </div>
+              )}
 
-                    {/* Feelings chips if any */}
-                    {bm.feelings && bm.feelings.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {bm.feelings.map((f, i) => (
-                          <span
-                            key={i}
-                            className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200/50 dark:border-rose-800/40"
+              {filteredBookmarks.length === 0 ? (
+                <div className="py-16 text-center text-sm text-neutral-400">
+                  <Bookmark className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  {selectedGroupFilter === 'ALL'
+                    ? 'No bookmarks yet. Click any verse or combine multiple verses to save them!'
+                    : `No bookmarks in group "${selectedGroupFilter}".`}
+                </div>
+              ) : (
+                filteredBookmarks.map((bm) => {
+                  const firstVerse = bm.verseNumbers?.[0] || bm.verse || 1;
+                  const rangeLabel = bm.verseRange || bm.verse;
+                  return (
+                    <div
+                      key={bm.id || `${bm.bookId}:${bm.chapter}:${rangeLabel}`}
+                      className="p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/30 hover:border-amber-300 dark:hover:border-amber-700/60 transition group space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => {
+                            onNavigateToVerse(bm.bookId, bm.chapter, firstVerse);
+                            onClose();
+                          }}
+                          className="font-serif font-bold text-xs sm:text-sm text-amber-800 dark:text-amber-300 hover:underline flex items-center cursor-pointer"
+                        >
+                          <span>{bm.bookName} {bm.chapter}:{rangeLabel}</span>
+                          <ChevronRight className="w-3.5 h-3.5 ml-1 inline text-neutral-400" />
+                        </button>
+
+                        <div className="flex items-center space-x-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedGroupFilter(bm.group || 'General')}
+                            className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100/90 dark:bg-neutral-800 text-amber-800 dark:text-amber-300 border border-amber-300/40 hover:bg-amber-200 dark:hover:bg-neutral-700 transition cursor-pointer"
+                            title="Filter by this group"
                           >
-                            <span>{f.emoji}</span>
-                            <span>{f.label}</span>
+                            <span>📁</span>
+                            <span>{bm.group || 'General'}</span>
+                          </button>
+                          <button
+                            onClick={() => onRemoveBookmark(bm)}
+                            className="text-neutral-400 hover:text-rose-500 p-1 rounded transition cursor-pointer"
+                            title="Remove bookmark"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Feelings chips if any */}
+                      {bm.feelings && bm.feelings.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {bm.feelings.map((f, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200/50 dark:border-rose-800/40"
+                            >
+                              <span>{f.emoji}</span>
+                              <span>{f.label}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Note if any */}
+                      {bm.note && (
+                        <div className="p-2 rounded-lg bg-amber-50/80 dark:bg-neutral-800/60 border-l-2 border-amber-600 text-xs font-sans text-neutral-800 dark:text-neutral-200">
+                          <span className="font-semibold text-amber-800 dark:text-amber-400 block mb-0.5">
+                            Reflection:
                           </span>
-                        ))}
-                      </div>
-                    )}
+                          {bm.note}
+                        </div>
+                      )}
 
-                    {/* Note if any */}
-                    {bm.note && (
-                      <div className="p-2 rounded-lg bg-amber-50/80 dark:bg-neutral-800/60 border-l-2 border-amber-600 text-xs font-sans text-neutral-800 dark:text-neutral-200">
-                        <span className="font-semibold text-amber-800 dark:text-amber-400 block mb-0.5">
-                          Reflection:
-                        </span>
-                        {bm.note}
-                      </div>
-                    )}
-
-                    <p className="text-xs text-neutral-600 dark:text-neutral-300 font-serif line-clamp-3 italic">
-                      "{bm.text}"
-                    </p>
-                  </div>
-                );
-              })
-            )
+                      <p className="text-xs text-neutral-600 dark:text-neutral-300 font-serif line-clamp-3 italic">
+                        "{bm.text}"
+                      </p>
+                    </div>
+                  );
+                })
+              )}
+            </>
           )}
 
           {activeTab === 'notes' && (

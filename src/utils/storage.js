@@ -1,5 +1,6 @@
 const STORAGE_KEYS = {
   BOOKMARKS: 'catholic_bible_bookmarks',
+  BOOKMARK_GROUPS: 'catholic_bible_bookmark_groups',
   HIGHLIGHTS: 'catholic_bible_highlights',
   NOTES: 'catholic_bible_notes',
   PREFERENCES: 'catholic_bible_prefs',
@@ -52,12 +53,44 @@ export function isBookmarked(bookId, chapter, verse) {
   return false;
 }
 
+// Bookmark Groups helpers
+const DEFAULT_BOOKMARK_GROUPS = ['General', 'Favorites', 'Peace & Comfort', 'Daily Reflections'];
+
+export function getBookmarkGroups() {
+  const custom = getStored(STORAGE_KEYS.BOOKMARK_GROUPS, DEFAULT_BOOKMARK_GROUPS);
+  const set = new Set(Array.isArray(custom) ? custom : DEFAULT_BOOKMARK_GROUPS);
+  const bookmarks = getBookmarks();
+  Object.values(bookmarks).forEach((b) => {
+    if (b.group && b.group.trim()) {
+      set.add(b.group.trim());
+    }
+  });
+  return Array.from(set);
+}
+
+export function addBookmarkGroup(groupName) {
+  if (!groupName || !groupName.trim()) return getBookmarkGroups();
+  const trimmed = groupName.trim();
+  const current = getBookmarkGroups();
+  if (!current.includes(trimmed)) {
+    const updated = [...current, trimmed];
+    setStored(STORAGE_KEYS.BOOKMARK_GROUPS, updated);
+    return updated;
+  }
+  return current;
+}
+
 export function saveBookmarkWithDetails(item) {
   const bookmarks = getBookmarks();
   const id = item.id || `${item.bookId}:${item.chapter}:${item.verseRange || item.verse}`;
+  const group = item.group && item.group.trim() ? item.group.trim() : 'General';
   
+  // Ensure group is saved in list
+  addBookmarkGroup(group);
+
   bookmarks[id] = {
     ...item,
+    group,
     id,
     savedAt: new Date().toISOString()
   };

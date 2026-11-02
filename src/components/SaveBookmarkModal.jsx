@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Bookmark, Check, Palette, Sparkles, MessageSquare, Heart, Cloud } from 'lucide-react';
+import { X, Bookmark, Check, Palette, Sparkles, MessageSquare, Heart, Cloud, FolderPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getBookmarkGroups, addBookmarkGroup } from '../utils/storage';
 
 const FEELING_OPTIONS = [
   { id: 'peaceful', label: 'Peaceful / Calm', emoji: '🕊️' },
@@ -35,12 +36,21 @@ export default function SaveBookmarkModal({
   const [selectedColor, setSelectedColor] = useState('yellow');
   const [selectedFeelings, setSelectedFeelings] = useState([]);
   const [reflectionNote, setReflectionNote] = useState('');
+  const [availableGroups, setAvailableGroups] = useState(['General', 'Favorites', 'Peace & Comfort', 'Daily Reflections']);
+  const [selectedGroup, setSelectedGroup] = useState('General');
+  const [isCreatingNewGroup, setIsCreatingNewGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setSelectedColor('yellow');
       setSelectedFeelings([]);
       setReflectionNote('');
+      const groups = getBookmarkGroups();
+      setAvailableGroups(groups);
+      setSelectedGroup('General');
+      setIsCreatingNewGroup(false);
+      setNewGroupName('');
     }
   }, [isOpen]);
 
@@ -74,6 +84,17 @@ export default function SaveBookmarkModal({
     );
   };
 
+  const handleAddNewGroup = (e) => {
+    if (e) e.preventDefault();
+    const trimmed = newGroupName.trim();
+    if (!trimmed) return;
+    const updated = addBookmarkGroup(trimmed);
+    setAvailableGroups(updated);
+    setSelectedGroup(trimmed);
+    setNewGroupName('');
+    setIsCreatingNewGroup(false);
+  };
+
   const handleSave = () => {
     const feelingsData = selectedFeelings.map(id => {
       const match = FEELING_OPTIONS.find(f => f.id === id);
@@ -87,6 +108,7 @@ export default function SaveBookmarkModal({
       verseNumbers: verseNums,
       verseRange: verseRangeStr,
       text: combinedText,
+      group: selectedGroup || 'General',
       color: selectedColor,
       note: reflectionNote.trim(),
       feelings: feelingsData,
@@ -96,7 +118,10 @@ export default function SaveBookmarkModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-fadeIn"
+      onClick={onClose}
+    >
       <div 
         className="relative w-full max-w-xl bg-white dark:bg-[#1a1917] rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -166,6 +191,86 @@ export default function SaveBookmarkModal({
               >
                 No Color
               </button>
+            </div>
+          </div>
+
+          {/* 2. Bookmark Group / Folder */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center space-x-1.5">
+                <FolderPlus className="w-4 h-4 text-amber-600" />
+                <span>Bookmark Group / Folder:</span>
+              </label>
+              {!isCreatingNewGroup && (
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingNewGroup(true)}
+                  className="text-xs text-amber-700 dark:text-amber-400 font-semibold hover:underline flex items-center space-x-1 cursor-pointer"
+                >
+                  <span>+ Create New Group</span>
+                </button>
+              )}
+            </div>
+
+            {/* Inline Create New Group Box */}
+            {isCreatingNewGroup && (
+              <div className="mb-2.5 p-2.5 bg-amber-50 dark:bg-neutral-850 rounded-xl border border-amber-300 dark:border-amber-700/60 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddNewGroup();
+                    }
+                  }}
+                  placeholder="Group name, e.g. Morning Prayers, Hope..."
+                  autoFocus
+                  className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddNewGroup}
+                  disabled={!newGroupName.trim()}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-40 transition cursor-pointer"
+                >
+                  Save Group
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreatingNewGroup(false);
+                    setNewGroupName('');
+                  }}
+                  className="px-2 py-1.5 text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {/* Group Pills */}
+            <div className="flex flex-wrap gap-2">
+              {availableGroups.map((grp) => {
+                const isSelected = selectedGroup === grp;
+                return (
+                  <button
+                    key={grp}
+                    type="button"
+                    onClick={() => setSelectedGroup(grp)}
+                    className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-amber-700 text-white font-semibold shadow-xs ring-1 ring-amber-600'
+                        : 'bg-white dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+                    }`}
+                  >
+                    <span>📁</span>
+                    <span>{grp}</span>
+                    {isSelected && <Check className="w-3 h-3 text-white ml-0.5" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
