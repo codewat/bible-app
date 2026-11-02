@@ -462,6 +462,110 @@ export function buildRosarySequence(mysteryKey = 'joyful') {
   return sequence;
 }
 
+// Builds the complete, continuous step-by-step Chaplet of the Divine Mercy prayer sequence
+export function buildDivineMercySequence() {
+  const sequence = [];
+
+  // 1. Sign of the Cross
+  sequence.push({
+    id: 'dm_sign_of_cross',
+    section: 'intro',
+    stepTitle: 'Sign of the Cross',
+    subtitle: 'Opening Prayer',
+    beadLabel: '✝️',
+    beadType: 'large',
+    text: 'In the name of the Father, and of the Son, and of the Holy Ghost. Amen.',
+    speechText: 'In the name of the Father, and of the Son, and of the Holy Ghost. Amen.'
+  });
+
+  // 2. Opening 3 o\'clock Prayer
+  sequence.push({
+    id: 'dm_opening_3oclock',
+    section: 'intro',
+    stepTitle: "Opening Prayer (3 o'clock)",
+    subtitle: 'Hour of Great Mercy',
+    beadLabel: '3:00',
+    beadType: 'large',
+    text: 'You expired, Jesus, but the source of life gushed forth for souls, and the ocean of mercy opened up for the whole world. O Fount of Life, unfathomable Divine Mercy, envelop the whole world and empty Yourself out upon us.',
+    speechText: 'You expired, Jesus, but the source of life gushed forth for souls, and the ocean of mercy opened up for the whole world. O Fount of Life, unfathomable Divine Mercy, envelop the whole world and empty Yourself out upon us.'
+  });
+
+  // 3. O Blood and Water (Repeated 3 times)
+  for (let i = 1; i <= 3; i++) {
+    sequence.push({
+      id: `dm_blood_and_water_${i}`,
+      section: 'intro',
+      stepTitle: `O Blood and Water (${i}/3)`,
+      subtitle: `Fount of Mercy • Invocation ${i} of 3`,
+      beadLabel: `${i}`,
+      beadType: 'small',
+      text: 'O Blood and Water, which gushed forth from the Heart of Jesus as a fount of mercy for us, I trust in You!',
+      speechText: 'O Blood and Water, which gushed forth from the Heart of Jesus as a fount of mercy for us, I trust in You!'
+    });
+  }
+
+  // 4. 5 Decades of the Divine Mercy Chaplet
+  for (let d = 1; d <= 5; d++) {
+    // Large Bead: Eternal Father
+    sequence.push({
+      id: `dm_decade_${d}_eternal_father`,
+      section: `decade_${d}`,
+      decade: d,
+      bead: 0,
+      stepTitle: `Decade ${d} • Eternal Father`,
+      subtitle: `Decade ${d} of 5 • Our Father Bead`,
+      beadLabel: 'OF',
+      beadType: 'large',
+      text: 'Eternal Father, I offer You the Body and Blood, Soul and Divinity of Your dearly beloved Son, Our Lord Jesus Christ, in atonement for our sins and those of the whole world.',
+      speechText: 'Eternal Father, I offer You the Body and Blood, Soul and Divinity of Your dearly beloved Son, Our Lord Jesus Christ, in atonement for our sins and those of the whole world.'
+    });
+
+    // 10 Small Beads: Sorrowful Passion (Repeated 10 times per decade!)
+    for (let h = 1; h <= 10; h++) {
+      sequence.push({
+        id: `dm_decade_${d}_bead_${h}`,
+        section: `decade_${d}`,
+        decade: d,
+        bead: h,
+        stepTitle: `Decade ${d} • Sorrowful Passion (${h}/10)`,
+        subtitle: `Decade ${d} of 5 • Bead ${h} of 10`,
+        beadLabel: `${h}`,
+        beadType: 'small',
+        text: 'For the sake of His sorrowful Passion, have mercy on us and on the whole world.',
+        speechText: 'For the sake of His sorrowful Passion, have mercy on us and on the whole world.'
+      });
+    }
+  }
+
+  // 5. Concluding Doxology (Holy God - Repeated 3 times!)
+  for (let k = 1; k <= 3; k++) {
+    sequence.push({
+      id: `dm_doxology_${k}`,
+      section: 'concluding',
+      stepTitle: `Holy God (${k}/3)`,
+      subtitle: `Concluding Doxology • Invocation ${k} of 3`,
+      beadLabel: `${k}`,
+      beadType: 'small',
+      text: 'Holy God, Holy Mighty One, Holy Immortal One, have mercy on us and on the whole world.',
+      speechText: 'Holy God, Holy Mighty One, Holy Immortal One, have mercy on us and on the whole world.'
+    });
+  }
+
+  // 6. Closing Prayer & Sign of the Cross
+  sequence.push({
+    id: 'dm_closing_prayer',
+    section: 'concluding',
+    stepTitle: 'Closing Prayer',
+    subtitle: 'Closing Collect & Sign of the Cross',
+    beadLabel: 'Amen',
+    beadType: 'large',
+    text: 'Eternal God, in whom mercy is endless and the treasury of compassion inexhaustible, look kindly upon us and increase Your mercy in us, that in difficult moments we might not despair nor become despondent, but with great confidence submit ourselves to Your holy will, which is Love and Mercy itself. Amen.\n\nJesus, I trust in You. (3 times)\nIn the name of the Father, and of the Son, and of the Holy Ghost. Amen.',
+    speechText: 'Eternal God, in whom mercy is endless and the treasury of compassion inexhaustible, look kindly upon us and increase Your mercy in us, that in difficult moments we might not despair nor become despondent, but with great confidence submit ourselves to Your holy will, which is Love and Mercy itself. Amen... Jesus, I trust in You... Jesus, I trust in You... Jesus, I trust in You... In the name of the Father, and of the Son, and of the Holy Ghost. Amen.'
+  });
+
+  return sequence;
+}
+
 export const COMMON_PRAYERS = [
   {
     id: 'sign_of_cross',

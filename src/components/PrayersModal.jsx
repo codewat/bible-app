@@ -7,6 +7,7 @@ import {
 import { 
   ROSARY_MYSTERIES, 
   buildRosarySequence,
+  buildDivineMercySequence,
   COMMON_PRAYERS, 
   TRADITIONAL_PRAYERS, 
   getTodaysMysteryKey 
@@ -23,6 +24,16 @@ const ROSARY_SECTIONS = [
   { id: 'concluding', label: 'Closing Prayers', icon: '👑', startIndex: 71, endIndex: 72 },
 ];
 
+const DM_SECTIONS = [
+  { id: 'intro', label: 'Opening Prayers', icon: '✝️', startIndex: 0, endIndex: 4 },
+  { id: 'decade_1', label: '1st Decade', icon: '1', startIndex: 5, endIndex: 15 },
+  { id: 'decade_2', label: '2nd Decade', icon: '2', startIndex: 16, endIndex: 26 },
+  { id: 'decade_3', label: '3rd Decade', icon: '3', startIndex: 27, endIndex: 37 },
+  { id: 'decade_4', label: '4th Decade', icon: '4', startIndex: 38, endIndex: 48 },
+  { id: 'decade_5', label: '5th Decade', icon: '5', startIndex: 49, endIndex: 59 },
+  { id: 'concluding', label: 'Closing Prayers', icon: '🕊️', startIndex: 60, endIndex: 63 },
+];
+
 export default function PrayersModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('rosary'); // 'rosary' | 'divine_mercy' | 'traditional'
   
@@ -30,6 +41,13 @@ export default function PrayersModal({ isOpen, onClose }) {
   const [selectedMysteryKey, setSelectedMysteryKey] = useState(getTodaysMysteryKey());
   const rosarySequence = useMemo(() => buildRosarySequence(selectedMysteryKey), [selectedMysteryKey]);
   const [stepIndex, setStepIndex] = useState(0); // 0 = The Apostles' Creed
+
+  // Divine Mercy State: Complete continuous 5-decade sequence without spoken titles
+  const divineMercySequence = useMemo(() => buildDivineMercySequence(), []);
+  const [dmStepIndex, setDmStepIndex] = useState(0);
+
+  // Audio Playback State
+  const [audioMode, setAudioMode] = useState(null); // 'rosary' | 'divine_mercy' | 'single' | null
   const [isAudioRunning, setIsAudioRunning] = useState(false);
   const [isAudioPaused, setIsAudioPaused] = useState(false);
 
@@ -72,6 +90,9 @@ export default function PrayersModal({ isOpen, onClose }) {
     const unsubscribe = speechService.addStateListener((state) => {
       setIsAudioRunning(state.isPlaying);
       setIsAudioPaused(state.isPaused);
+      if (!state.isPlaying) {
+        setAudioMode(null);
+      }
     });
     return () => {
       unsubscribe();
@@ -81,23 +102,37 @@ export default function PrayersModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
+  const isRosaryRunning = isAudioRunning && audioMode === 'rosary';
+  const isDmRunning = isAudioRunning && audioMode === 'divine_mercy';
+  const isSingleRunning = isAudioRunning && audioMode === 'single';
+
+  // Rosary Active Step & Section Helpers
   const currentStep = rosarySequence[stepIndex] || rosarySequence[0];
   const currentMystery = ROSARY_MYSTERIES[selectedMysteryKey];
   const currentSection = ROSARY_SECTIONS.find(
     s => stepIndex >= s.startIndex && stepIndex <= s.endIndex
   ) || ROSARY_SECTIONS[0];
-
-  // Extract beads for the active section (Opening, Decade 1-5, or Closing)
   const currentSectionSteps = rosarySequence.slice(
     currentSection.startIndex, 
     currentSection.endIndex + 1
   );
 
-  // Starts continuous audio from given index (or current step) with relaxing voice & prayerful pace
+  // Divine Mercy Active Step & Section Helpers
+  const currentDmStep = divineMercySequence[dmStepIndex] || divineMercySequence[0];
+  const currentDmSection = DM_SECTIONS.find(
+    s => dmStepIndex >= s.startIndex && dmStepIndex <= s.endIndex
+  ) || DM_SECTIONS[0];
+  const currentDmSectionSteps = divineMercySequence.slice(
+    currentDmSection.startIndex,
+    currentDmSection.endIndex + 1
+  );
+
+  // Starts continuous Rosary audio from given index (or current step) with relaxing voice & prayerful pace
   const handleStartRosary = (startIdx = null) => {
     speechService.stop();
     const targetIdx = typeof startIdx === 'number' ? startIdx : stepIndex;
     setStepIndex(targetIdx);
+    setAudioMode('rosary');
     setIsAudioRunning(true);
     setIsAudioPaused(false);
 
@@ -110,6 +145,27 @@ export default function PrayersModal({ isOpen, onClose }) {
     const items = rosarySequence.map(s => ({ text: s.speechText, lang: 'en-US' }));
     speechService.playSequence(items, targetIdx, (item, idx) => {
       setStepIndex(idx);
+    }, { rate: parsedRate, voiceURI: selectedVoiceURI });
+  };
+
+  // Starts continuous Divine Mercy audio reciting full chaplet with 10x repetitions and NO titles
+  const handleStartDivineMercy = (startIdx = null) => {
+    speechService.stop();
+    const targetIdx = typeof startIdx === 'number' ? startIdx : dmStepIndex;
+    setDmStepIndex(targetIdx);
+    setAudioMode('divine_mercy');
+    setIsAudioRunning(true);
+    setIsAudioPaused(false);
+
+    const parsedRate = parseFloat(rosaryRate) || 0.85;
+    speechService.setRate(parsedRate);
+    if (selectedVoiceURI) {
+      speechService.setSelectedVoiceURI(selectedVoiceURI);
+    }
+
+    const items = divineMercySequence.map(s => ({ text: s.speechText, lang: 'en-US' }));
+    speechService.playSequence(items, targetIdx, (item, idx) => {
+      setDmStepIndex(idx);
     }, { rate: parsedRate, voiceURI: selectedVoiceURI });
   };
 
@@ -128,14 +184,32 @@ export default function PrayersModal({ isOpen, onClose }) {
     }
   };
 
+  const handlePauseResumeDm = () => {
+    if (isAudioPaused) {
+      speechService.resume();
+      setIsAudioPaused(false);
+    } else {
+      speechService.pause();
+      setIsAudioPaused(true);
+    }
+  };
+
   const handleStopAudio = () => {
     speechService.stop();
+    setAudioMode(null);
+    setIsAudioRunning(false);
+    setIsAudioPaused(false);
+  };
+
+  const handleStopDm = () => {
+    speechService.stop();
+    setAudioMode(null);
     setIsAudioRunning(false);
     setIsAudioPaused(false);
   };
 
   const handleNextStep = () => {
-    if (isAudioRunning) {
+    if (isRosaryRunning) {
       speechService.next();
     } else {
       setStepIndex(prev => Math.min(prev + 1, rosarySequence.length - 1));
@@ -143,16 +217,39 @@ export default function PrayersModal({ isOpen, onClose }) {
   };
 
   const handlePrevStep = () => {
-    if (isAudioRunning) {
+    if (isRosaryRunning) {
       speechService.prev();
     } else {
       setStepIndex(prev => Math.max(prev - 1, 0));
     }
   };
 
+  const handleNextStepDm = () => {
+    if (isDmRunning) {
+      speechService.next();
+    } else {
+      setDmStepIndex(prev => Math.min(prev + 1, divineMercySequence.length - 1));
+    }
+  };
+
+  const handlePrevStepDm = () => {
+    if (isDmRunning) {
+      speechService.prev();
+    } else {
+      setDmStepIndex(prev => Math.max(prev - 1, 0));
+    }
+  };
+
   const handleJumpToStep = (idx) => {
     setStepIndex(idx);
-    if (isAudioRunning) {
+    if (isRosaryRunning) {
+      speechService.jumpTo(idx);
+    }
+  };
+
+  const handleJumpToDmStep = (idx) => {
+    setDmStepIndex(idx);
+    if (isDmRunning) {
       speechService.jumpTo(idx);
     }
   };
@@ -160,6 +257,11 @@ export default function PrayersModal({ isOpen, onClose }) {
   const handleRestartRosary = () => {
     handleStopAudio();
     setStepIndex(0);
+  };
+
+  const handleRestartDm = () => {
+    handleStopDm();
+    setDmStepIndex(0);
   };
 
   const handleChangeMystery = (mKey) => {
@@ -173,12 +275,16 @@ export default function PrayersModal({ isOpen, onClose }) {
     onClose();
   };
 
+  // Pure prayer speech without titles
   const handleSpeakPrayer = (text, lang = 'en-US') => {
     if (isAudioRunning) {
       handleStopAudio();
       return;
     }
     speechService.stop();
+    setAudioMode('single');
+    setIsAudioRunning(true);
+    setIsAudioPaused(false);
     speechService.speakSingleVerse({ text, lang });
   };
   const isPlayingAudio = isAudioRunning;
@@ -296,7 +402,7 @@ export default function PrayersModal({ isOpen, onClose }) {
 
             {/* START ROSARY / Audio Control Deck */}
             <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 text-white shadow-md">
-              {!isAudioRunning ? (
+              {!isRosaryRunning ? (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <div className="flex items-center space-x-2">
@@ -585,21 +691,21 @@ export default function PrayersModal({ isOpen, onClose }) {
 
                 <button
                   onClick={() => {
-                    if (isAudioRunning) {
+                    if (isRosaryRunning) {
                       handleStopAudio();
                     } else {
                       handleStartRosary(stepIndex);
                     }
                   }}
                   className={`p-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition shadow-xs ${
-                    isAudioRunning
+                    isRosaryRunning
                       ? 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-white'
                       : 'bg-amber-700 hover:bg-amber-800 text-white'
                   }`}
-                  title={isAudioRunning ? 'Stop audio' : 'Listen aloud'}
+                  title={isRosaryRunning ? 'Stop audio' : 'Listen aloud'}
                 >
                   <Volume2 className="w-4 h-4" />
-                  <span>{isAudioRunning ? 'Playing' : 'Audio'}</span>
+                  <span>{isRosaryRunning ? 'Playing' : 'Audio'}</span>
                 </button>
               </div>
 
@@ -767,41 +873,371 @@ export default function PrayersModal({ isOpen, onClose }) {
         )}
 
                 {/* Tab 2: Divine Mercy Chaplet */}
-        {activeTab === 'divine_mercy' && divineMercyPrayer && (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-            <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-neutral-900/40 border border-amber-200/80 dark:border-neutral-800 flex items-center justify-between">
-              <div>
-                <h3 className="font-serif font-bold text-lg text-neutral-900 dark:text-neutral-100">
-                  {divineMercyPrayer.title}
-                </h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {divineMercyPrayer.instructions}
-                </p>
-              </div>
+        {activeTab === 'divine_mercy' && (
+          <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4">
+            {/* START DIVINE MERCY / Audio Control Deck */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-red-800 via-rose-900 to-amber-900 text-white shadow-md">
+              {!isDmRunning ? (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xl">✝️</span>
+                      <h3 className="font-bold text-base tracking-wide">
+                        The Chaplet of the Divine Mercy
+                      </h3>
+                    </div>
+                    <p className="text-xs text-rose-100/90 mt-0.5">
+                      {dmStepIndex === 0
+                        ? "Continuous recitation: 5 Decades (10x Sorrowful Passion each) • 3x Holy God"
+                        : `Step ${dmStepIndex + 1} of ${divineMercySequence.length}: ${currentDmStep.stepTitle}`}
+                    </p>
+                  </div>
 
-              <button
-                onClick={() => handleSpeakPrayer(divineMercyPrayer.content.map(c => `${c.section}. ${c.text}`).join(' '))}
-                className="p-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-semibold flex items-center space-x-1 shadow transition"
-              >
-                <Volume2 className="w-4 h-4" />
-                <span>{isPlayingAudio ? 'Listening...' : 'Audio'}</span>
-              </button>
+                  <div className="flex items-center space-x-2">
+                    {dmStepIndex > 0 && (
+                      <button
+                        onClick={() => handleStartDivineMercy(0)}
+                        className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition border border-white/20 flex items-center space-x-1.5"
+                        title="Start over from Sign of the Cross"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Start at Beginning</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleStartDivineMercy(dmStepIndex)}
+                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs sm:text-sm tracking-wide shadow-lg transition flex items-center justify-center space-x-2 active:scale-95 cursor-pointer"
+                    >
+                      <Play className="w-4 h-4 fill-amber-950" />
+                      <span>{dmStepIndex === 0 ? 'START DIVINE MERCY' : 'RESUME AUDIO'}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span className="font-bold text-xs sm:text-sm truncate max-w-[220px] sm:max-w-md">
+                        {isAudioPaused ? 'Paused: ' : 'Reciting: '} {currentDmStep.stepTitle}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-amber-200 font-mono">
+                      {dmStepIndex + 1} / {divineMercySequence.length}
+                    </span>
+                  </div>
+
+                  {/* Player controls */}
+                  <div className="flex items-center justify-between bg-black/20 p-2 rounded-xl backdrop-blur-xs">
+                    <button
+                      onClick={handlePrevStepDm}
+                      disabled={dmStepIndex === 0}
+                      className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition text-white"
+                      title="Previous prayer"
+                    >
+                      <SkipBack className="w-4 h-4" />
+                    </button>
+
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={handlePauseResumeDm}
+                        className="px-4 py-2 rounded-xl bg-white text-amber-950 font-bold text-xs flex items-center space-x-1.5 hover:bg-amber-100 transition shadow"
+                      >
+                        {isAudioPaused ? (
+                          <>
+                            <Play className="w-3.5 h-3.5 fill-amber-950" />
+                            <span>Resume</span>
+                          </>
+                        ) : (
+                          <>
+                            <Pause className="w-3.5 h-3.5 fill-amber-950" />
+                            <span>Pause</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={handleStopDm}
+                        className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition"
+                        title="Stop audio recitation"
+                      >
+                        <Square className="w-4 h-4 fill-white" />
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={handleNextStepDm}
+                      disabled={dmStepIndex >= divineMercySequence.length - 1}
+                      className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition text-white"
+                      title="Next prayer"
+                    >
+                      <SkipForward className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Voice & Pacing Settings Accordion */}
+              <div className="pt-2.5 mt-2.5 border-t border-white/15">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setShowVoiceSettings(!showVoiceSettings)}
+                    className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-black/25 hover:bg-black/35 text-amber-200 hover:text-white transition text-[11px] font-medium"
+                  >
+                    <Sliders className="w-3.5 h-3.5" />
+                    <span>🕊️ Relaxing Voice & Pace</span>
+                    <ChevronDown className={`w-3 h-3 transition-transform ${showVoiceSettings ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <div className="flex items-center space-x-1.5 text-[11px] text-amber-200/90 font-medium">
+                    <span className="hidden sm:inline">Cadence:</span>
+                    <span className="px-1.5 py-0.5 rounded bg-black/20 text-amber-300 font-mono">
+                      {rosaryRate === '0.85' ? '0.85x (Gentle)' : rosaryRate === '0.78' ? '0.78x (Deep)' : `${rosaryRate}x`}
+                    </span>
+                  </div>
+                </div>
+
+                {showVoiceSettings && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-black/35 border border-white/10 space-y-3 animate-fadeIn text-xs">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-amber-200">
+                        <span>Select Voice on your Device:</span>
+                        <button
+                          type="button"
+                          onClick={handleTestVoice}
+                          className="px-2 py-0.5 rounded-lg bg-white/20 hover:bg-white/30 text-white font-medium text-[10px] transition flex items-center space-x-1"
+                          title="Preview prayer in this voice"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                          <span>▶ Test Voice</span>
+                        </button>
+                      </div>
+                      <select
+                        value={selectedVoiceURI}
+                        onChange={(e) => {
+                          setSelectedVoiceURI(e.target.value);
+                          speechService.setSelectedVoiceURI(e.target.value);
+                        }}
+                        className="w-full p-2 rounded-xl bg-neutral-900 border border-amber-500/40 text-neutral-100 text-xs focus:ring-2 focus:ring-amber-400 outline-hidden font-sans"
+                      >
+                        {availableVoices.length === 0 ? (
+                          <option value="">Device Default Natural Voice</option>
+                        ) : (
+                          availableVoices.map((v) => (
+                            <option key={v.voiceURI || v.name} value={v.voiceURI || v.name}>
+                              {v.badge ? `${v.badge} • ${v.name}` : v.name}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-semibold text-amber-200">
+                        Prayer Cadence & Speed:
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: '0.85', label: '🕊️ Gentle (0.85x)', sub: 'Calm & Reverent' },
+                          { id: '0.78', label: '🕊️ Deep (0.78x)', sub: 'Meditative' },
+                          { id: '1.0', label: 'Standard (1.0x)', sub: 'Brisk' },
+                        ].map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setRosaryRate(p.id);
+                              try { localStorage.setItem('catholic_bible_rosary_rate', p.id); } catch {}
+                              speechService.setRate(parseFloat(p.id));
+                            }}
+                            className={`p-2 rounded-xl border text-center transition ${
+                              rosaryRate === p.id
+                                ? 'bg-amber-400 text-amber-950 border-amber-400 font-bold shadow-sm'
+                                : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
+                            }`}
+                          >
+                            <div className="text-[11px] font-bold">{p.label}</div>
+                            <div className="text-[9px] opacity-80 mt-0.5">{p.sub}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-3">
-              {divineMercyPrayer.content.map((sec, i) => (
-                <div 
-                  key={i}
-                  className="p-4 rounded-xl bg-neutral-50/70 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 space-y-1.5"
-                >
-                  <h4 className="font-semibold text-xs text-amber-800 dark:text-amber-400 uppercase tracking-wide">
-                    {sec.section}
-                  </h4>
-                  <p className="font-serif text-sm leading-relaxed text-neutral-800 dark:text-neutral-200 whitespace-pre-line">
-                    {sec.text}
-                  </p>
+            {/* Section Switcher Pills for Divine Mercy */}
+            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 text-xs scrollbar-none">
+              {DM_SECTIONS.map((sec) => {
+                const isActive = currentDmSection.id === sec.id;
+                const isPassed = dmStepIndex > sec.endIndex;
+                return (
+                  <button
+                    key={sec.id}
+                    onClick={() => handleJumpToDmStep(sec.startIndex)}
+                    className={`whitespace-nowrap px-3 py-1.5 rounded-xl font-medium transition flex items-center space-x-1 shrink-0 ${
+                      isActive
+                        ? 'bg-rose-700 text-white font-bold shadow-xs'
+                        : isPassed
+                        ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-900 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                    }`}
+                  >
+                    <span>{sec.icon}</span>
+                    <span>{sec.label}</span>
+                    {isPassed && <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400 ml-0.5" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Active Section Beads Track */}
+            <div className="p-3 rounded-2xl bg-rose-50/60 dark:bg-neutral-900/50 border border-rose-200/70 dark:border-neutral-800 space-y-2">
+              <div className="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400">
+                <span className="font-semibold text-rose-900 dark:text-rose-200">
+                  {currentDmSection.label} Beads
+                </span>
+                <span className="text-[11px] text-neutral-500">
+                  Click any bead to jump or recite
+                </span>
+              </div>
+
+              <div className="flex items-center justify-center flex-wrap gap-2 pt-1 pb-1">
+                {currentDmSectionSteps.map((step, localIdx) => {
+                  const absoluteIdx = currentDmSection.startIndex + localIdx;
+                  const isCurrent = absoluteIdx === dmStepIndex;
+                  const isDone = absoluteIdx < dmStepIndex;
+
+                  let beadStyle = 'bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300';
+                  if (isCurrent) {
+                    beadStyle = 'bg-rose-600 text-white border-rose-600 ring-4 ring-rose-400/40 font-bold scale-110 shadow-md';
+                  } else if (isDone) {
+                    beadStyle = 'bg-rose-100 dark:bg-rose-950/50 border-rose-400 text-rose-800 dark:text-rose-300';
+                  }
+
+                  const isLargeBead = step.beadType === 'large';
+
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => handleJumpToDmStep(absoluteIdx)}
+                      className={`relative flex items-center justify-center rounded-full transition-all duration-200 select-none ${
+                        isLargeBead ? 'px-3 py-1.5 h-8 min-w-[32px] text-xs rounded-xl' : 'w-7 h-7 text-[11px]'
+                      } border ${beadStyle}`}
+                      title={step.stepTitle}
+                    >
+                      {isDone ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <span>{step.beadLabel}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Divine Mercy Prayer Reading Hero Card */}
+            <div className="p-4 sm:p-6 rounded-2xl bg-white dark:bg-neutral-900/90 border-2 border-rose-300/80 dark:border-rose-600/40 shadow-sm space-y-4">
+              <div className="flex items-start justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
+                <div className="space-y-1">
+                  <span className="text-xs uppercase font-bold tracking-wider text-rose-800 dark:text-rose-400">
+                    {currentDmStep.subtitle || currentDmSection.label} • Step {dmStepIndex + 1} of {divineMercySequence.length}
+                  </span>
+                  <h3 className="font-serif font-bold text-xl sm:text-2xl text-neutral-900 dark:text-neutral-100">
+                    {currentDmStep.stepTitle}
+                  </h3>
                 </div>
-              ))}
+
+                <button
+                  onClick={() => {
+                    if (isDmRunning) {
+                      handleStopDm();
+                    } else {
+                      handleStartDivineMercy(dmStepIndex);
+                    }
+                  }}
+                  className={`p-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition shadow-xs ${
+                    isDmRunning
+                      ? 'bg-rose-100 text-rose-900 dark:bg-rose-900 dark:text-white'
+                      : 'bg-rose-700 hover:bg-rose-800 text-white'
+                  }`}
+                  title={isDmRunning ? 'Stop audio' : 'Listen aloud'}
+                >
+                  <Volume2 className="w-4 h-4" />
+                  <span>{isDmRunning ? 'Playing' : 'Audio'}</span>
+                </button>
+              </div>
+
+              {/* Prayer text */}
+              <div className="p-4 rounded-xl bg-rose-50/40 dark:bg-neutral-800/40 border border-rose-100 dark:border-neutral-800">
+                <p className="font-serif text-base sm:text-lg leading-relaxed text-neutral-900 dark:text-neutral-100 whitespace-pre-line">
+                  {currentDmStep.text}
+                </p>
+              </div>
+            </div>
+
+            {/* Bottom Stepper & Progress */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+                <span>Progress: {dmStepIndex + 1} of {divineMercySequence.length} prayers ({Math.round(((dmStepIndex + 1) / divineMercySequence.length) * 100)}%)</span>
+                <span>{currentDmSection.label}</span>
+              </div>
+              <div className="w-full bg-neutral-200 dark:bg-neutral-800 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-rose-600 h-full rounded-full transition-all duration-300"
+                  style={{ width: `${((dmStepIndex + 1) / divineMercySequence.length) * 100}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <button
+                  onClick={handleRestartDm}
+                  className="px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-medium transition flex items-center space-x-1"
+                  title="Reset to Opening Prayers"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Reset</span>
+                </button>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handlePrevStepDm}
+                    disabled={dmStepIndex === 0}
+                    className="px-3 sm:px-4 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-40 disabled:hover:bg-transparent text-neutral-700 dark:text-neutral-300 text-xs font-medium transition flex items-center space-x-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Previous</span>
+                  </button>
+
+                  <button
+                    onClick={handleNextStepDm}
+                    disabled={dmStepIndex >= divineMercySequence.length - 1}
+                    className="px-4 sm:px-5 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 disabled:opacity-40 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
+                  >
+                    <span>
+                      {dmStepIndex < divineMercySequence.length - 1
+                        ? `Next: ${divineMercySequence[dmStepIndex + 1].stepTitle}`
+                        : 'Chaplet Finished'}
+                    </span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Chaplet Guide & Notes Card */}
+            <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-neutral-900/40 border border-amber-200/60 dark:border-neutral-800 space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300 flex items-center space-x-1.5">
+                <span>🕊️</span>
+                <span>The 3:00 PM Hour of Great Mercy</span>
+              </h4>
+              <p className="text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
+                Our Lord asked Saint Faustina that the Chaplet be prayed especially at 3:00 PM, the hour of His death on the Cross: 
+                <span className="italic font-serif"> "At three o'clock, implore My mercy, especially for sinners; and, if only for a brief moment, immerse yourself in My Passion... This is the hour of great mercy for the whole world."</span>
+              </p>
             </div>
           </div>
         )}
@@ -844,9 +1280,9 @@ export default function PrayersModal({ isOpen, onClose }) {
                     </div>
 
                     <button
-                      onClick={() => handleSpeakPrayer(`${prayer.title}. ${prayer.text}`)}
+                      onClick={() => handleSpeakPrayer(prayer.text)}
                       className="p-1.5 rounded-lg text-xs bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-600 hover:bg-amber-50 transition flex items-center space-x-1"
-                      title="Listen aloud"
+                      title="Listen aloud (prayer only, no titles)"
                     >
                       <Volume2 className="w-3.5 h-3.5" />
                       <span>Audio</span>
