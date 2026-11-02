@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from './components/Navbar';
 import BibleReader from './components/BibleReader';
 import MoodModal from './components/MoodModal';
@@ -7,6 +7,7 @@ import SearchModal from './components/SearchModal';
 import SaveBookmarkModal from './components/SaveBookmarkModal';
 import JournalDrawer from './components/JournalDrawer';
 import AudioPlayerBar from './components/AudioPlayerBar';
+import PrayerAudioPlayerBar from './components/PrayerAudioPlayerBar';
 import PrayersModal from './components/PrayersModal';
 import AuthModal from './components/AuthModal';
 
@@ -66,14 +67,36 @@ export default function App() {
   const [fontSize, setFontSize] = useState('text-base');
   const [fontFamily, setFontFamily] = useState('serif'); // 'serif' | 'sans' | 'book'
 
-  // Audio State
+  // Audio State for Bible Scripture
   const [audioState, setAudioState] = useState({
     isPlaying: false,
     isPaused: false,
     currentIndex: 0,
     rate: 1.0,
+    mode: null,
   });
   const [currentVerseSpeaking, setCurrentVerseSpeaking] = useState(null);
+
+  // Audio State for Holy Rosary & Divine Mercy (Persists across Bible screens)
+  const [prayerAudioState, setPrayerAudioState] = useState({
+    isRosaryActive: false,
+    isRosaryPaused: false,
+    rosaryStepTitle: '',
+    audioRosaryIndex: 0,
+    totalRosarySteps: 73,
+    isDmActive: false,
+    isDmPaused: false,
+    dmStepTitle: '',
+    audioDmIndex: 0,
+    totalDmSteps: 58,
+  });
+  const prayerAudioControlsRef = useRef(null);
+
+  const handlePausePrayerAudio = () => {
+    if (prayerAudioControlsRef.current?.pauseAudio) {
+      prayerAudioControlsRef.current.pauseAudio();
+    }
+  };
 
   // Initialize data on mount
   useEffect(() => {
@@ -189,8 +212,20 @@ export default function App() {
   const currentBookMeta = booksMeta.find((b) => b.id === currentBookId);
   const chapterVerses = currentBookData?.chapters?.[String(currentChapter)] || [];
 
-  // Verse Selection Handlers
+  // Verse Selection & Audio Click Handlers
   const handleToggleVerseSelect = (verseObj) => {
+    // If scripture audio is currently playing or paused:
+    if ((audioState.isPlaying || audioState.isPaused) && audioState.mode === 'bible') {
+      handlePausePrayerAudio();
+      const verseIdx = chapterVerses.findIndex((v) => v.verse === verseObj.verse);
+      if (verseIdx !== -1) {
+        // Jump and continue playing scripture audio from this clicked verse!
+        speechService.playChapter(chapterVerses, verseIdx);
+        setSelectedVerses([verseObj]);
+        return;
+      }
+    }
+
     setSelectedVerses((prev) => {
       const exists = prev.some((v) => v.verse === verseObj.verse);
       if (exists) {
@@ -227,6 +262,7 @@ export default function App() {
 
   // Play Selected Verses
   const handlePlaySelectedVerses = (verses) => {
+    handlePausePrayerAudio();
     speechService.playChapter(verses, 0);
   };
 
@@ -299,9 +335,10 @@ export default function App() {
 
   // Audio Play Chapter
   const handlePlayChapterAudio = () => {
-    if (audioState.isPlaying) {
+    if (audioState.isPlaying && audioState.mode === 'bible') {
       speechService.stop();
     } else {
+      handlePausePrayerAudio();
       speechService.playChapter(chapterVerses, 0);
     }
   };
@@ -352,7 +389,7 @@ export default function App() {
         />
       </div>
 
-      {/* Floating Audio Bar when audio is active */}
+      {/* Floating Audio Bar when scripture audio is active */}
       <AudioPlayerBar
         audioState={audioState}
         currentVerseSpeaking={currentVerseSpeaking}
@@ -360,6 +397,41 @@ export default function App() {
         chapter={currentChapter}
         onStopAudio={() => speechService.stop()}
       />
+
+      {/* Floating Audio Prayer Bar (Holy Rosary / Divine Mercy) while in Bible scriptures */}
+      {!isPrayersOpen && (prayerAudioState.isRosaryActive || prayerAudioState.isDmActive) && (
+        <PrayerAudioPlayerBar
+          isRosaryActive={prayerAudioState.isRosaryActive}
+          isRosaryPaused={prayerAudioState.isRosaryPaused}
+          rosaryStepTitle={prayerAudioState.rosaryStepTitle}
+          audioRosaryIndex={prayerAudioState.audioRosaryIndex}
+          totalRosarySteps={prayerAudioState.totalRosarySteps}
+          isDmActive={prayerAudioState.isDmActive}
+          isDmPaused={prayerAudioState.isDmPaused}
+          dmStepTitle={prayerAudioState.dmStepTitle}
+          audioDmIndex={prayerAudioState.audioDmIndex}
+          totalDmSteps={prayerAudioState.totalDmSteps}
+          onPrev={() => {
+            if (prayerAudioState.isRosaryActive) prayerAudioControlsRef.current?.prevRosary();
+            else prayerAudioControlsRef.current?.prevDm();
+          }}
+          onNext={() => {
+            if (prayerAudioState.isRosaryActive) prayerAudioControlsRef.current?.nextRosary();
+            else prayerAudioControlsRef.current?.nextDm();
+          }}
+          onPauseResume={() => {
+            if (prayerAudioState.isRosaryActive) prayerAudioControlsRef.current?.pauseResumeRosary();
+            else prayerAudioControlsRef.current?.pauseResumeDm();
+          }}
+          onStop={() => {
+            prayerAudioControlsRef.current?.stopAudio();
+          }}
+          onOpenPrayers={() => setIsPrayersOpen(true)}
+          hasBiblePlayerVisible={
+            (audioState.isPlaying || audioState.isPaused) && audioState.mode === 'bible'
+          }
+        />
+      )}
 
       {/* 1. "How are you feeling today?" Welcome / Mood Modal */}
       <MoodModal
@@ -401,6 +473,10 @@ export default function App() {
       <PrayersModal
         isOpen={isPrayersOpen}
         onClose={() => setIsPrayersOpen(false)}
+        onPrayerAudioSync={(state) => setPrayerAudioState(state)}
+        onRegisterPrayerControls={(controls) => {
+          prayerAudioControlsRef.current = controls;
+        }}
       />
 
       {/* 6. Journal Drawer (Bookmarks, Notes with feelings, Highlights) */}

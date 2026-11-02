@@ -8,6 +8,7 @@ class SpeechController {
     this.pitch = 1.0;
     this.isPlaying = false;
     this.isPaused = false;
+    this.mode = null; // 'bible' | 'prayer' | null
     this.onVerseChangeCallback = null;
     this.onStateChangeCallback = null;
     this.stateListeners = new Set();
@@ -177,6 +178,7 @@ class SpeechController {
     if (!this.synth) return;
     this.stop();
 
+    this.mode = 'bible';
     this.versesQueue = verses;
     this.currentIndex = startIndex;
     this.isPlaying = true;
@@ -190,6 +192,7 @@ class SpeechController {
     if (!this.synth) return;
     this.stop();
 
+    this.mode = 'bible';
     this.versesQueue = [verseObj];
     this.currentIndex = 0;
     this.onItemChangeCallback = null;
@@ -209,6 +212,7 @@ class SpeechController {
     if (!this.synth) return;
     this.stop();
 
+    this.mode = 'prayer';
     if (options.rate) {
       this.rate = options.rate;
     }
@@ -402,6 +406,7 @@ class SpeechController {
     }
     this.isPlaying = false;
     this.isPaused = false;
+    this.mode = null;
     this.currentUtterance = null;
     this.versesQueue = [];
     this.currentIndex = 0;
@@ -418,7 +423,8 @@ class SpeechController {
       isPlaying: this.isPlaying,
       isPaused: this.isPaused,
       currentIndex: this.currentIndex,
-      rate: this.rate
+      rate: this.rate,
+      mode: this.mode
     };
     if (this.onStateChangeCallback) {
       this.onStateChangeCallback(state);

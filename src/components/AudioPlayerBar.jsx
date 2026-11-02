@@ -9,7 +9,7 @@ export default function AudioPlayerBar({
   chapter,
   onStopAudio,
 }) {
-  if (!audioState.isPlaying && !audioState.isPaused) {
+  if ((!audioState.isPlaying && !audioState.isPaused) || audioState.mode !== 'bible') {
     return null;
   }
 

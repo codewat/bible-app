@@ -34,7 +34,12 @@ const DM_SECTIONS = [
   { id: 'concluding', label: 'Closing Prayers', icon: '🕊️', startIndex: 60, endIndex: 63 },
 ];
 
-export default function PrayersModal({ isOpen, onClose }) {
+export default function PrayersModal({ 
+  isOpen, 
+  onClose,
+  onPrayerAudioSync,
+  onRegisterPrayerControls 
+}) {
   const [activeTab, setActiveTab] = useState('rosary'); // 'rosary' | 'divine_mercy' | 'traditional'
   
   // Rosary Manual Reading State: Mystery and bead currently displayed in the view below
@@ -111,11 +116,76 @@ export default function PrayersModal({ isOpen, onClose }) {
     });
     return () => {
       unsubscribe();
-      speechService.stop();
     };
   }, []);
 
-  if (!isOpen) return null;
+  // Sync prayer audio state to parent (for floating player bar on Bible screen)
+  useEffect(() => {
+    if (onPrayerAudioSync) {
+      onPrayerAudioSync({
+        isRosaryActive,
+        isRosaryPaused,
+        rosaryStepTitle: audioRosarySequence[audioRosaryIndex]?.stepTitle || 'The Apostles\' Creed',
+        audioRosaryIndex,
+        totalRosarySteps: audioRosarySequence.length,
+        isDmActive,
+        isDmPaused,
+        dmStepTitle: divineMercySequence[audioDmIndex]?.stepTitle || 'Opening Prayers',
+        audioDmIndex,
+        totalDmSteps: divineMercySequence.length,
+      });
+    }
+  }, [
+    isRosaryActive,
+    isRosaryPaused,
+    audioRosaryIndex,
+    audioMysteryKey,
+    isDmActive,
+    isDmPaused,
+    audioDmIndex,
+    audioRosarySequence,
+    divineMercySequence,
+    onPrayerAudioSync,
+  ]);
+
+  // Expose prayer audio controls to parent (for floating player bar on Bible screen)
+  useEffect(() => {
+    if (onRegisterPrayerControls) {
+      onRegisterPrayerControls({
+        playRosary: handlePlayRosaryAudio,
+        pauseResumeRosary: handlePauseResumeRosary,
+        prevRosary: handleAudioPrevRosary,
+        nextRosary: handleAudioNextRosary,
+        restartRosary: handleRestartRosaryConfirmed,
+        playDm: handlePlayDivineMercyAudio,
+        pauseResumeDm: handlePauseResumeDm,
+        prevDm: handleAudioPrevDm,
+        nextDm: handleAudioNextDm,
+        restartDm: handleRestartDmConfirmed,
+        stopAudio: handleStopAudio,
+        pauseAudio: () => {
+          if (isRosaryActive && !isRosaryPaused) {
+            speechService.pause();
+            setIsRosaryPaused(true);
+          }
+          if (isDmActive && !isDmPaused) {
+            speechService.pause();
+            setIsDmPaused(true);
+          }
+        },
+      });
+    }
+  }, [
+    isRosaryActive,
+    isRosaryPaused,
+    audioRosaryIndex,
+    isDmActive,
+    isDmPaused,
+    audioDmIndex,
+    audioRosarySequence,
+    divineMercySequence,
+    onRegisterPrayerControls,
+  ]);
 
   const isRosaryRunning = isRosaryActive && !isRosaryPaused;
   const isDmRunning = isDmActive && !isDmPaused;
@@ -333,7 +403,7 @@ export default function PrayersModal({ isOpen, onClose }) {
   };
 
   const handleClose = () => {
-    handleStopAudio();
+    // Closing modal does NOT stop audio! Audio continues on the Bible screen.
     onClose();
   };
 
@@ -357,7 +427,7 @@ export default function PrayersModal({ isOpen, onClose }) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-fadeIn ${!isOpen ? 'hidden pointer-events-none' : ''}`}>
       <div 
         className="relative w-full max-w-3xl bg-white dark:bg-[#1a1917] rounded-2xl shadow-2xl border border-amber-900/10 dark:border-amber-500/20 h-[88vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
