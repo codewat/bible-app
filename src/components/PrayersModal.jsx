@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   X, Volume2, Sparkles, ChevronRight, ChevronLeft, ChevronDown,
   RotateCcw, Check, BookOpen, Heart, Shield, Sliders,
@@ -66,6 +66,25 @@ export default function PrayersModal({ isOpen, onClose }) {
   // Traditional Prayers State
   const [selectedPrayerId, setSelectedPrayerId] = useState(null);
   const [prayerCategory, setPrayerCategory] = useState('ALL');
+
+  // Refs for auto-scrolling prayer views
+  const prayerCardRef = useRef(null);
+  const dmPrayerCardRef = useRef(null);
+  const [showRosaryRestartConfirm, setShowRosaryRestartConfirm] = useState(false);
+  const [showDmRestartConfirm, setShowDmRestartConfirm] = useState(false);
+
+  // Auto-scroll the active prayer card into view when step changes
+  useEffect(() => {
+    if (activeTab === 'rosary' && prayerCardRef.current) {
+      prayerCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [stepIndex, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'divine_mercy' && dmPrayerCardRef.current) {
+      dmPrayerCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [dmStepIndex, activeTab]);
 
   // Load voices and keep speechService state in sync
   useEffect(() => {
@@ -174,7 +193,27 @@ export default function PrayersModal({ isOpen, onClose }) {
     speechService.previewVoice(selectedVoiceURI, parsedRate);
   };
 
+  const handleRestartRosaryConfirmed = () => {
+    setShowRosaryRestartConfirm(false);
+    handleStartRosary(0);
+    setTimeout(() => {
+      prayerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
+  };
+
+  const handleRestartDmConfirmed = () => {
+    setShowDmRestartConfirm(false);
+    handleStartDivineMercy(0);
+    setTimeout(() => {
+      dmPrayerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
+  };
+
   const handlePauseResume = () => {
+    if (!isRosaryRunning) {
+      handleStartRosary(stepIndex);
+      return;
+    }
     if (isAudioPaused) {
       speechService.resume();
       setIsAudioPaused(false);
@@ -185,6 +224,10 @@ export default function PrayersModal({ isOpen, onClose }) {
   };
 
   const handlePauseResumeDm = () => {
+    if (!isDmRunning) {
+      handleStartDivineMercy(dmStepIndex);
+      return;
+    }
     if (isAudioPaused) {
       speechService.resume();
       setIsAudioPaused(false);
@@ -209,35 +252,63 @@ export default function PrayersModal({ isOpen, onClose }) {
   };
 
   const handleNextStep = () => {
+    const nextIdx = Math.min(stepIndex + 1, rosarySequence.length - 1);
+    if (nextIdx === stepIndex) return;
+
+    setStepIndex(nextIdx);
+
     if (isRosaryRunning) {
-      speechService.next();
-    } else {
-      setStepIndex(prev => Math.min(prev + 1, rosarySequence.length - 1));
+      speechService.jumpTo(nextIdx);
     }
+
+    setTimeout(() => {
+      prayerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
   };
 
   const handlePrevStep = () => {
+    const prevIdx = Math.max(stepIndex - 1, 0);
+    if (prevIdx === stepIndex) return;
+
+    setStepIndex(prevIdx);
+
     if (isRosaryRunning) {
-      speechService.prev();
-    } else {
-      setStepIndex(prev => Math.max(prev - 1, 0));
+      speechService.jumpTo(prevIdx);
     }
+
+    setTimeout(() => {
+      prayerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
   };
 
   const handleNextStepDm = () => {
+    const nextIdx = Math.min(dmStepIndex + 1, divineMercySequence.length - 1);
+    if (nextIdx === dmStepIndex) return;
+
+    setDmStepIndex(nextIdx);
+
     if (isDmRunning) {
-      speechService.next();
-    } else {
-      setDmStepIndex(prev => Math.min(prev + 1, divineMercySequence.length - 1));
+      speechService.jumpTo(nextIdx);
     }
+
+    setTimeout(() => {
+      dmPrayerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
   };
 
   const handlePrevStepDm = () => {
+    const prevIdx = Math.max(dmStepIndex - 1, 0);
+    if (prevIdx === dmStepIndex) return;
+
+    setDmStepIndex(prevIdx);
+
     if (isDmRunning) {
-      speechService.prev();
-    } else {
-      setDmStepIndex(prev => Math.max(prev - 1, 0));
+      speechService.jumpTo(prevIdx);
     }
+
+    setTimeout(() => {
+      dmPrayerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
   };
 
   const handleJumpToStep = (idx) => {
@@ -245,6 +316,9 @@ export default function PrayersModal({ isOpen, onClose }) {
     if (isRosaryRunning) {
       speechService.jumpTo(idx);
     }
+    setTimeout(() => {
+      prayerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
   };
 
   const handleJumpToDmStep = (idx) => {
@@ -252,6 +326,9 @@ export default function PrayersModal({ isOpen, onClose }) {
     if (isDmRunning) {
       speechService.jumpTo(idx);
     }
+    setTimeout(() => {
+      dmPrayerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
   };
 
   const handleRestartRosary = () => {
@@ -402,7 +479,7 @@ export default function PrayersModal({ isOpen, onClose }) {
 
             {/* START ROSARY / Audio Control Deck */}
             <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 text-white shadow-md">
-              {!isRosaryRunning ? (
+              {stepIndex === 0 && !isRosaryRunning ? (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <div className="flex items-center space-x-2">
@@ -412,93 +489,143 @@ export default function PrayersModal({ isOpen, onClose }) {
                       </h3>
                     </div>
                     <p className="text-xs text-amber-100/90 mt-0.5">
-                      {stepIndex === 0 
-                        ? "Continuous recitation from the Apostles' Creed through all 5 decades" 
-                        : `Step ${stepIndex + 1} of ${rosarySequence.length}: ${currentStep.stepTitle}`}
+                      Continuous recitation from the Apostles' Creed through all 5 decades
                     </p>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    {stepIndex > 0 && (
-                      <button
-                        onClick={() => handleStartRosary(0)}
-                        className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition border border-white/20 flex items-center space-x-1.5"
-                        title="Start over from Apostles' Creed"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Start at Creed</span>
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleStartRosary(stepIndex)}
-                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs sm:text-sm tracking-wide shadow-lg transition flex items-center justify-center space-x-2 active:scale-95 cursor-pointer"
-                    >
-                      <Play className="w-4 h-4 fill-amber-950" />
-                      <span>{stepIndex === 0 ? 'START ROSARY' : 'RESUME AUDIO'}</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleStartRosary(0)}
+                    className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs sm:text-sm tracking-wide shadow-lg transition flex items-center justify-center space-x-2 active:scale-95 cursor-pointer shrink-0"
+                  >
+                    <Play className="w-4 h-4 fill-amber-950" />
+                    <span>START ROSARY</span>
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                      <span className="font-bold text-xs sm:text-sm truncate max-w-[220px] sm:max-w-md">
-                        {isAudioPaused ? 'Paused: ' : 'Reciting: '} {currentStep.stepTitle}
-                      </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg">📿</span>
+                        <h3 className="font-bold text-sm sm:text-base tracking-wide">
+                          The Most Holy Rosary
+                        </h3>
+                        {isRosaryRunning && !isAudioPaused && (
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-[10px] font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                            <span>Reciting</span>
+                          </span>
+                        )}
+                        {isRosaryRunning && isAudioPaused && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/25 border border-amber-400/30 text-amber-200 text-[10px] font-semibold">
+                            ⏸ Paused
+                          </span>
+                        )}
+                        {!isRosaryRunning && (
+                          <span className="px-2 py-0.5 rounded-full bg-white/15 text-white/90 text-[10px] font-semibold">
+                            Stopped
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-amber-100/90 mt-0.5 truncate max-w-sm sm:max-w-md">
+                        Step {stepIndex + 1} of {rosarySequence.length}: {currentStep.stepTitle}
+                      </p>
                     </div>
-                    <span className="text-[11px] text-amber-200 font-mono">
-                      {stepIndex + 1} / {rosarySequence.length}
-                    </span>
-                  </div>
 
-                  {/* Player controls */}
-                  <div className="flex items-center justify-between bg-black/20 p-2 rounded-xl backdrop-blur-xs">
-                    <button
-                      onClick={handlePrevStep}
-                      disabled={stepIndex === 0}
-                      className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition text-white"
-                      title="Previous prayer"
-                    >
-                      <SkipBack className="w-4 h-4" />
-                    </button>
-
-                    <div className="flex items-center space-x-2">
+                    {/* Action buttons: Restart, Prev, Pause/Resume, Next, Stop */}
+                    <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
+                      {/* 1. Restart Button */}
                       <button
-                        onClick={handlePauseResume}
-                        className="px-4 py-2 rounded-xl bg-white text-amber-950 font-bold text-xs flex items-center space-x-1.5 hover:bg-amber-100 transition shadow"
+                        type="button"
+                        onClick={() => setShowRosaryRestartConfirm(true)}
+                        className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition border border-white/20 flex items-center space-x-1.5 shadow-xs cursor-pointer"
+                        title="Restart Rosary from beginning"
                       >
-                        {isAudioPaused ? (
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Restart</span>
+                      </button>
+
+                      {/* 2. Previous Button */}
+                      <button
+                        type="button"
+                        onClick={handlePrevStep}
+                        disabled={stepIndex === 0}
+                        className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white transition cursor-pointer"
+                        title="Previous prayer"
+                      >
+                        <SkipBack className="w-4 h-4" />
+                      </button>
+
+                      {/* 3. Pause / Resume Button */}
+                      <button
+                        type="button"
+                        onClick={handlePauseResume}
+                        className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs sm:text-sm tracking-wide shadow-md transition flex items-center space-x-1.5 active:scale-95 cursor-pointer"
+                      >
+                        {isRosaryRunning && !isAudioPaused ? (
                           <>
-                            <Play className="w-3.5 h-3.5 fill-amber-950" />
-                            <span>Resume</span>
+                            <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-950" />
+                            <span>Pause</span>
                           </>
                         ) : (
                           <>
-                            <Pause className="w-3.5 h-3.5 fill-amber-950" />
-                            <span>Pause</span>
+                            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-950" />
+                            <span>Resume</span>
                           </>
                         )}
                       </button>
 
+                      {/* 4. Next Button */}
                       <button
-                        onClick={handleStopAudio}
-                        className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition"
-                        title="Stop audio recitation"
+                        type="button"
+                        onClick={handleNextStep}
+                        disabled={stepIndex >= rosarySequence.length - 1}
+                        className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white/15 hover:bg-white/25 disabled:opacity-30 disabled:hover:bg-white/15 text-white text-xs font-semibold transition border border-white/20 flex items-center space-x-1.5 shadow-xs cursor-pointer"
+                        title="Next prayer"
                       >
-                        <Square className="w-4 h-4 fill-white" />
+                        <span>Next</span>
+                        <SkipForward className="w-3.5 h-3.5" />
                       </button>
-                    </div>
 
-                    <button
-                      onClick={handleNextStep}
-                      disabled={stepIndex >= rosarySequence.length - 1}
-                      className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition text-white"
-                      title="Next prayer"
-                    >
-                      <SkipForward className="w-4 h-4" />
-                    </button>
+                      {/* 5. Stop Button */}
+                      {isRosaryRunning && (
+                        <button
+                          type="button"
+                          onClick={handleStopAudio}
+                          className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
+                          title="Stop audio"
+                        >
+                          <Square className="w-3.5 h-3.5 fill-white" />
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Confirmation Prompt when Restart is clicked */}
+                  {showRosaryRestartConfirm && (
+                    <div className="p-3 rounded-xl bg-black/40 border border-amber-400/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 animate-fadeIn">
+                      <div className="flex items-center space-x-2 text-xs text-amber-100">
+                        <RotateCcw className="w-4 h-4 text-amber-300 shrink-0" />
+                        <span className="font-semibold">Do you want to start from the beginning?</span>
+                      </div>
+                      <div className="flex items-center space-x-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleRestartRosaryConfirmed}
+                          className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs transition shadow-xs cursor-pointer"
+                        >
+                          Yes, Restart
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowRosaryRestartConfirm(false)}
+                          className="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white font-medium text-xs transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -670,7 +797,10 @@ export default function PrayersModal({ isOpen, onClose }) {
             </div>
 
             {/* Prayer Reading Hero Card */}
-            <div className="p-4 sm:p-6 rounded-2xl bg-white dark:bg-neutral-900/90 border-2 border-amber-300/80 dark:border-amber-600/40 shadow-sm space-y-4">
+            <div 
+              ref={prayerCardRef}
+              className="p-4 sm:p-6 rounded-2xl bg-white dark:bg-neutral-900/90 border-2 border-amber-300/80 dark:border-amber-600/40 shadow-sm space-y-4"
+            >
               {/* Card Header */}
               <div className="flex items-start justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
                 <div className="space-y-1">
@@ -836,12 +966,13 @@ export default function PrayersModal({ isOpen, onClose }) {
 
               <div className="flex items-center justify-between gap-2 pt-1">
                 <button
-                  onClick={handleRestartRosary}
-                  className="px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-medium transition flex items-center space-x-1"
-                  title="Reset to Apostles' Creed"
+                  type="button"
+                  onClick={() => setShowRosaryRestartConfirm(true)}
+                  className="px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-medium transition flex items-center space-x-1 cursor-pointer"
+                  title="Restart Rosary from beginning"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Reset</span>
+                  <span className="hidden sm:inline">Restart</span>
                 </button>
 
                 <div className="flex items-center space-x-2">
@@ -877,7 +1008,7 @@ export default function PrayersModal({ isOpen, onClose }) {
           <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4">
             {/* START DIVINE MERCY / Audio Control Deck */}
             <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-red-800 via-rose-900 to-amber-900 text-white shadow-md">
-              {!isDmRunning ? (
+              {dmStepIndex === 0 && !isDmRunning ? (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <div className="flex items-center space-x-2">
@@ -887,93 +1018,143 @@ export default function PrayersModal({ isOpen, onClose }) {
                       </h3>
                     </div>
                     <p className="text-xs text-rose-100/90 mt-0.5">
-                      {dmStepIndex === 0
-                        ? "Continuous recitation: 5 Decades (10x Sorrowful Passion each) • 3x Holy God"
-                        : `Step ${dmStepIndex + 1} of ${divineMercySequence.length}: ${currentDmStep.stepTitle}`}
+                      Continuous recitation: 5 Decades (10x Sorrowful Passion each) • 3x Holy God
                     </p>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    {dmStepIndex > 0 && (
-                      <button
-                        onClick={() => handleStartDivineMercy(0)}
-                        className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition border border-white/20 flex items-center space-x-1.5"
-                        title="Start over from Sign of the Cross"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Start at Beginning</span>
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleStartDivineMercy(dmStepIndex)}
-                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs sm:text-sm tracking-wide shadow-lg transition flex items-center justify-center space-x-2 active:scale-95 cursor-pointer"
-                    >
-                      <Play className="w-4 h-4 fill-amber-950" />
-                      <span>{dmStepIndex === 0 ? 'START DIVINE MERCY' : 'RESUME AUDIO'}</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleStartDivineMercy(0)}
+                    className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs sm:text-sm tracking-wide shadow-lg transition flex items-center justify-center space-x-2 active:scale-95 cursor-pointer shrink-0"
+                  >
+                    <Play className="w-4 h-4 fill-amber-950" />
+                    <span>START DIVINE MERCY</span>
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                      <span className="font-bold text-xs sm:text-sm truncate max-w-[220px] sm:max-w-md">
-                        {isAudioPaused ? 'Paused: ' : 'Reciting: '} {currentDmStep.stepTitle}
-                      </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg">✝️</span>
+                        <h3 className="font-bold text-sm sm:text-base tracking-wide">
+                          The Chaplet of the Divine Mercy
+                        </h3>
+                        {isDmRunning && !isAudioPaused && (
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-[10px] font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                            <span>Reciting</span>
+                          </span>
+                        )}
+                        {isDmRunning && isAudioPaused && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/25 border border-amber-400/30 text-amber-200 text-[10px] font-semibold">
+                            ⏸ Paused
+                          </span>
+                        )}
+                        {!isDmRunning && (
+                          <span className="px-2 py-0.5 rounded-full bg-white/15 text-white/90 text-[10px] font-semibold">
+                            Stopped
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-rose-100/90 mt-0.5 truncate max-w-sm sm:max-w-md">
+                        Step {dmStepIndex + 1} of {divineMercySequence.length}: {currentDmStep.stepTitle}
+                      </p>
                     </div>
-                    <span className="text-[11px] text-amber-200 font-mono">
-                      {dmStepIndex + 1} / {divineMercySequence.length}
-                    </span>
-                  </div>
 
-                  {/* Player controls */}
-                  <div className="flex items-center justify-between bg-black/20 p-2 rounded-xl backdrop-blur-xs">
-                    <button
-                      onClick={handlePrevStepDm}
-                      disabled={dmStepIndex === 0}
-                      className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition text-white"
-                      title="Previous prayer"
-                    >
-                      <SkipBack className="w-4 h-4" />
-                    </button>
-
-                    <div className="flex items-center space-x-2">
+                    {/* Action buttons: Restart, Prev, Pause/Resume, Next, Stop */}
+                    <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
+                      {/* 1. Restart Button */}
                       <button
-                        onClick={handlePauseResumeDm}
-                        className="px-4 py-2 rounded-xl bg-white text-amber-950 font-bold text-xs flex items-center space-x-1.5 hover:bg-amber-100 transition shadow"
+                        type="button"
+                        onClick={() => setShowDmRestartConfirm(true)}
+                        className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition border border-white/20 flex items-center space-x-1.5 shadow-xs cursor-pointer"
+                        title="Restart Chaplet from beginning"
                       >
-                        {isAudioPaused ? (
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Restart</span>
+                      </button>
+
+                      {/* 2. Previous Button */}
+                      <button
+                        type="button"
+                        onClick={handlePrevStepDm}
+                        disabled={dmStepIndex === 0}
+                        className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white transition cursor-pointer"
+                        title="Previous prayer"
+                      >
+                        <SkipBack className="w-4 h-4" />
+                      </button>
+
+                      {/* 3. Pause / Resume Button */}
+                      <button
+                        type="button"
+                        onClick={handlePauseResumeDm}
+                        className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs sm:text-sm tracking-wide shadow-md transition flex items-center space-x-1.5 active:scale-95 cursor-pointer"
+                      >
+                        {isDmRunning && !isAudioPaused ? (
                           <>
-                            <Play className="w-3.5 h-3.5 fill-amber-950" />
-                            <span>Resume</span>
+                            <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-950" />
+                            <span>Pause</span>
                           </>
                         ) : (
                           <>
-                            <Pause className="w-3.5 h-3.5 fill-amber-950" />
-                            <span>Pause</span>
+                            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-950" />
+                            <span>Resume</span>
                           </>
                         )}
                       </button>
 
+                      {/* 4. Next Button */}
                       <button
-                        onClick={handleStopDm}
-                        className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition"
-                        title="Stop audio recitation"
+                        type="button"
+                        onClick={handleNextStepDm}
+                        disabled={dmStepIndex >= divineMercySequence.length - 1}
+                        className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white/15 hover:bg-white/25 disabled:opacity-30 disabled:hover:bg-white/15 text-white text-xs font-semibold transition border border-white/20 flex items-center space-x-1.5 shadow-xs cursor-pointer"
+                        title="Next prayer"
                       >
-                        <Square className="w-4 h-4 fill-white" />
+                        <span>Next</span>
+                        <SkipForward className="w-3.5 h-3.5" />
                       </button>
-                    </div>
 
-                    <button
-                      onClick={handleNextStepDm}
-                      disabled={dmStepIndex >= divineMercySequence.length - 1}
-                      className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition text-white"
-                      title="Next prayer"
-                    >
-                      <SkipForward className="w-4 h-4" />
-                    </button>
+                      {/* 5. Stop Button */}
+                      {isDmRunning && (
+                        <button
+                          type="button"
+                          onClick={handleStopDm}
+                          className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
+                          title="Stop audio"
+                        >
+                          <Square className="w-3.5 h-3.5 fill-white" />
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Confirmation Prompt when Restart is clicked */}
+                  {showDmRestartConfirm && (
+                    <div className="p-3 rounded-xl bg-black/40 border border-amber-400/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 animate-fadeIn">
+                      <div className="flex items-center space-x-2 text-xs text-rose-100">
+                        <RotateCcw className="w-4 h-4 text-amber-300 shrink-0" />
+                        <span className="font-semibold">Do you want to start from the beginning?</span>
+                      </div>
+                      <div className="flex items-center space-x-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleRestartDmConfirmed}
+                          className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs transition shadow-xs cursor-pointer"
+                        >
+                          Yes, Restart
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowDmRestartConfirm(false)}
+                          className="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white font-medium text-xs transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1140,7 +1321,10 @@ export default function PrayersModal({ isOpen, onClose }) {
             </div>
 
             {/* Divine Mercy Prayer Reading Hero Card */}
-            <div className="p-4 sm:p-6 rounded-2xl bg-white dark:bg-neutral-900/90 border-2 border-rose-300/80 dark:border-rose-600/40 shadow-sm space-y-4">
+            <div 
+              ref={dmPrayerCardRef}
+              className="p-4 sm:p-6 rounded-2xl bg-white dark:bg-neutral-900/90 border-2 border-rose-300/80 dark:border-rose-600/40 shadow-sm space-y-4"
+            >
               <div className="flex items-start justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
                 <div className="space-y-1">
                   <span className="text-xs uppercase font-bold tracking-wider text-rose-800 dark:text-rose-400">
@@ -1194,12 +1378,13 @@ export default function PrayersModal({ isOpen, onClose }) {
 
               <div className="flex items-center justify-between gap-2 pt-1">
                 <button
-                  onClick={handleRestartDm}
-                  className="px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-medium transition flex items-center space-x-1"
-                  title="Reset to Opening Prayers"
+                  type="button"
+                  onClick={() => setShowDmRestartConfirm(true)}
+                  className="px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-medium transition flex items-center space-x-1 cursor-pointer"
+                  title="Restart Chaplet from beginning"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Reset</span>
+                  <span className="hidden sm:inline">Restart</span>
                 </button>
 
                 <div className="flex items-center space-x-2">

@@ -17,6 +17,7 @@ class SpeechController {
     this.voices = [];
     this.selectedVoiceURI = null;
     this.interPrayerPauseMs = 650; // Reverent breathing pause between Rosary beads
+    this.keepAliveTimer = null;
 
     if (typeof window !== 'undefined') {
       try {
@@ -219,9 +220,26 @@ class SpeechController {
     this.onItemChangeCallback = onItemChange;
     this.isPlaying = true;
     this.isPaused = false;
+    this.startKeepAlive();
     this.triggerState();
 
     this.speakVerseAt(this.currentIndex);
+  }
+
+  startKeepAlive() {
+    this.stopKeepAlive();
+    this.keepAliveTimer = setInterval(() => {
+      if (!this.synth || !this.isPlaying || this.isPaused) return;
+      this.synth.pause();
+      this.synth.resume();
+    }, 10000);
+  }
+
+  stopKeepAlive() {
+    if (this.keepAliveTimer) {
+      clearInterval(this.keepAliveTimer);
+      this.keepAliveTimer = null;
+    }
   }
 
   // Play a 3-second sample to test how the voice sounds
@@ -247,17 +265,29 @@ class SpeechController {
   }
 
   jumpTo(index) {
-    if (!this.synth || !this.isPlaying) return;
+    if (!this.synth) return;
     if (index >= 0 && index < this.versesQueue.length) {
+      if (this.isPaused) {
+        this.synth.resume();
+        this.isPaused = false;
+      }
       this.synth.cancel();
+      this.isPlaying = true;
+      this.startKeepAlive();
       this.speakVerseAt(index);
     }
   }
 
   next() {
-    if (!this.synth || !this.isPlaying) return;
+    if (!this.synth) return;
     if (this.currentIndex + 1 < this.versesQueue.length) {
+      if (this.isPaused) {
+        this.synth.resume();
+        this.isPaused = false;
+      }
       this.synth.cancel();
+      this.isPlaying = true;
+      this.startKeepAlive();
       this.speakVerseAt(this.currentIndex + 1);
     } else {
       this.stop();
@@ -265,9 +295,15 @@ class SpeechController {
   }
 
   prev() {
-    if (!this.synth || !this.isPlaying) return;
+    if (!this.synth) return;
     if (this.currentIndex > 0) {
+      if (this.isPaused) {
+        this.synth.resume();
+        this.isPaused = false;
+      }
       this.synth.cancel();
+      this.isPlaying = true;
+      this.startKeepAlive();
       this.speakVerseAt(this.currentIndex - 1);
     }
   }
@@ -286,6 +322,7 @@ class SpeechController {
     if (this.onItemChangeCallback) {
       this.onItemChangeCallback(item, index);
     }
+    this.triggerState();
 
     const rawText = item.verse 
       ? `Verse ${item.verse}. ${item.text}` 
@@ -350,6 +387,7 @@ class SpeechController {
   }
 
   stop() {
+    this.stopKeepAlive();
     if (this.synth) {
       this.synth.cancel();
     }
