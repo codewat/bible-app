@@ -214,18 +214,23 @@ export default function App() {
 
   // Verse Selection & Audio Click Handlers
   const handleToggleVerseSelect = (verseObj) => {
-    // If scripture audio is currently playing or paused:
-    if ((audioState.isPlaying || audioState.isPaused) && audioState.mode === 'bible') {
-      handlePausePrayerAudio();
+    // If scripture audio is currently actively playing (and no prayer is reciting):
+    if (
+      audioState.isPlaying &&
+      audioState.mode === 'bible' &&
+      !prayerAudioState.isRosaryActive &&
+      !prayerAudioState.isDmActive
+    ) {
       const verseIdx = chapterVerses.findIndex((v) => v.verse === verseObj.verse);
       if (verseIdx !== -1) {
-        // Jump and continue playing scripture audio from this clicked verse!
+        // Jump and continue playing scripture audio from this clicked verse
         speechService.playChapter(chapterVerses, verseIdx);
         setSelectedVerses([verseObj]);
         return;
       }
     }
 
+    // Toggle verse selection (never stops or pauses background prayer audio)
     setSelectedVerses((prev) => {
       const exists = prev.some((v) => v.verse === verseObj.verse);
       if (exists) {
@@ -280,17 +285,25 @@ export default function App() {
     setCurrentBookId(bookId);
     setCurrentChapter(Number(ch));
 
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      if (verseNum && currentBookData?.chapters?.[String(ch)]) {
-        const v = currentBookData.chapters[String(ch)].find(
-          (item) => item.verse === Number(verseNum)
-        );
+    // Wait for chapter DOM / cache to settle, then select target verse
+    const selectTargetVerse = (attempts = 0) => {
+      const verses = booksCache[bookId]?.chapters?.[String(ch)] || currentBookData?.chapters?.[String(ch)];
+      if (verseNum && verses && verses.length > 0) {
+        const v = verses.find((item) => item.verse === Number(verseNum));
         if (v) {
           setSelectedVerses([v]);
+          return;
         }
       }
-    }, 200);
+      if (attempts < 6) {
+        setTimeout(() => selectTargetVerse(attempts + 1), 120);
+      }
+    };
+
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      selectTargetVerse();
+    }, 120);
   };
 
   // Previous Chapter
@@ -336,7 +349,7 @@ export default function App() {
   // Audio Play Chapter
   const handlePlayChapterAudio = () => {
     if (audioState.isPlaying && audioState.mode === 'bible') {
-      speechService.stop();
+      speechService.stopScriptureAudio();
     } else {
       handlePausePrayerAudio();
       speechService.playChapter(chapterVerses, 0);
@@ -361,7 +374,7 @@ export default function App() {
           onOpenPrayers={() => setIsPrayersOpen(true)}
           onOpenAuth={() => setIsAuthOpen(true)}
           onPlayChapterAudio={handlePlayChapterAudio}
-          isPlayingAudio={audioState.isPlaying}
+          isPlayingAudio={audioState.isPlaying && audioState.mode === 'bible'}
           theme={theme}
           setTheme={setTheme}
           fontSize={fontSize}
@@ -381,7 +394,7 @@ export default function App() {
                   currentVerseSpeaking={currentVerseSpeaking}
                   bookName={currentBookMeta?.modernName || ''}
                   chapter={currentChapter}
-                  onStopAudio={() => speechService.stop()}
+                  onStopAudio={() => speechService.stopScriptureAudio()}
                 />
               )}
 

@@ -106,9 +106,9 @@ export default function PrayersModal({
     }
 
     const unsubscribe = speechService.addStateListener((state) => {
-      if (state.isPaused) {
-        setIsRosaryPaused(true);
-        setIsDmPaused(true);
+      if (state.mode === 'prayer') {
+        setIsRosaryPaused(Boolean(state.isPaused));
+        setIsDmPaused(Boolean(state.isPaused));
       }
       if (!state.isPlaying) {
         setIsSingleRunning(false);
@@ -415,7 +415,7 @@ export default function PrayersModal({
     }
     speechService.stop();
     setIsSingleRunning(true);
-    speechService.speakSingleVerse({ text, lang });
+    speechService.speakSingleVerse({ text, lang }, { mode: 'prayer' });
   };
 
   const divineMercyPrayer = TRADITIONAL_PRAYERS.find(p => p.id === 'divine_mercy');

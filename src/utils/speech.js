@@ -221,11 +221,11 @@ class SpeechController {
     this.speakVerseAt(this.currentIndex);
   }
 
-  playSingleVerse(verseObj) {
+  playSingleVerse(verseObj, options = {}) {
     if (!this.synth) return;
     this.stop();
 
-    this.mode = 'bible';
+    this.mode = options.mode || 'bible';
     this.versesQueue = [verseObj];
     this.currentIndex = 0;
     this.onItemChangeCallback = null;
@@ -237,8 +237,8 @@ class SpeechController {
   }
 
   // Alias for compatibility
-  speakSingleVerse(verseObj) {
-    this.playSingleVerse(verseObj);
+  speakSingleVerse(verseObj, options = {}) {
+    this.playSingleVerse(verseObj, options);
   }
 
   playSequence(items, startIndex = 0, onItemChange = null, options = {}, onComplete = null) {
@@ -269,9 +269,11 @@ class SpeechController {
     this.stopKeepAlive();
     this.keepAliveTimer = setInterval(() => {
       if (!this.synth || !this.isPlaying || this.isPaused) return;
-      this.synth.pause();
-      this.synth.resume();
-    }, 10000);
+      // If native synth stalled or was unexpectedly paused by OS, resume it
+      if (this.synth.speaking && this.synth.paused) {
+        this.synth.resume();
+      }
+    }, 5000);
   }
 
   stopKeepAlive() {
@@ -425,15 +427,23 @@ class SpeechController {
     };
 
     utterance.onerror = (e) => {
-      // Discard event if this utterance is no longer active
+      // Discard event if this utterance was intentionally cancelled or superseded by our code
       if (this.utteranceId !== currentId) return;
-      // Ignore cancellations or interruptions caused by changing playback rate or user jumping
-      if (e.error === 'canceled' || e.error === 'interrupted') {
-        return;
-      }
-      console.warn('SpeechSynthesis error:', e);
+
+      console.warn('SpeechSynthesis error:', e?.error || e);
       if (this.isPlaying && !this.isPaused) {
         this.clearPendingAdvance();
+        // If interrupted or canceled unexpectedly by browser/OS (e.g. DOM updates, page navigation), retry speaking current item
+        if (e.error === 'canceled' || e.error === 'interrupted') {
+          this.advanceTimer = setTimeout(() => {
+            if (this.utteranceId === currentId && this.isPlaying && !this.isPaused) {
+              this.speakVerseAt(this.currentIndex);
+            }
+          }, 200);
+          return;
+        }
+
+        // For other speech errors, proceed to next item after pause
         this.advanceTimer = setTimeout(() => {
           if (this.utteranceId === currentId && this.isPlaying && !this.isPaused) {
             this.speakVerseAt(this.currentIndex + 1);
