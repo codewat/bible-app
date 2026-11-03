@@ -164,13 +164,19 @@ class SpeechController {
 
   setRate(rate) {
     this.rate = rate;
+    this.triggerState();
     if (this.isPlaying && !this.isPaused) {
-      // Re-speak current with new rate
-      const cur = this.versesQueue[this.currentIndex];
-      if (cur) {
-        this.synth.cancel();
-        this.speakVerseAt(this.currentIndex);
+      const curIndex = this.currentIndex;
+      // Detach listeners from current utterance so cancel does not advance to next verse
+      if (this.currentUtterance) {
+        this.currentUtterance.onend = null;
+        this.currentUtterance.onerror = null;
       }
+      if (this.synth) {
+        this.synth.cancel();
+      }
+      // Re-speak current verse at new rate
+      this.speakVerseAt(curIndex);
     }
   }
 
@@ -273,6 +279,10 @@ class SpeechController {
   jumpTo(index) {
     if (!this.synth) return;
     if (index >= 0 && index < this.versesQueue.length) {
+      if (this.currentUtterance) {
+        this.currentUtterance.onend = null;
+        this.currentUtterance.onerror = null;
+      }
       if (this.isPaused) {
         this.synth.resume();
         this.isPaused = false;
@@ -287,6 +297,10 @@ class SpeechController {
   next() {
     if (!this.synth) return;
     if (this.currentIndex + 1 < this.versesQueue.length) {
+      if (this.currentUtterance) {
+        this.currentUtterance.onend = null;
+        this.currentUtterance.onerror = null;
+      }
       if (this.isPaused) {
         this.synth.resume();
         this.isPaused = false;
@@ -303,6 +317,10 @@ class SpeechController {
   prev() {
     if (!this.synth) return;
     if (this.currentIndex > 0) {
+      if (this.currentUtterance) {
+        this.currentUtterance.onend = null;
+        this.currentUtterance.onerror = null;
+      }
       if (this.isPaused) {
         this.synth.resume();
         this.isPaused = false;
@@ -371,6 +389,10 @@ class SpeechController {
     };
 
     utterance.onerror = (e) => {
+      // Ignore cancellations or interruptions caused by changing playback rate or user jumping
+      if (e.error === 'canceled' || e.error === 'interrupted') {
+        return;
+      }
       console.warn('SpeechSynthesis error:', e);
       if (this.isPlaying && !this.isPaused) {
         setTimeout(() => {
@@ -401,6 +423,10 @@ class SpeechController {
 
   stop() {
     this.stopKeepAlive();
+    if (this.currentUtterance) {
+      this.currentUtterance.onend = null;
+      this.currentUtterance.onerror = null;
+    }
     if (this.synth) {
       this.synth.cancel();
     }
