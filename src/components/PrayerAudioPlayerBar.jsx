@@ -81,19 +81,13 @@ export default function PrayerAudioPlayerBar({
         <button
           type="button"
           onClick={onPauseResume}
-          className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs shadow transition active:scale-95 flex items-center space-x-1 cursor-pointer"
+          className="p-2.5 rounded-full bg-amber-400 hover:bg-amber-300 text-amber-950 shadow transition transform active:scale-95 flex items-center justify-center cursor-pointer"
           title={isPaused ? 'Resume recitation' : 'Pause'}
         >
-          {!isPaused ? (
-            <>
-              <Pause className="w-3.5 h-3.5 fill-amber-950" />
-              <span className="hidden sm:inline">Pause</span>
-            </>
+          {isPaused ? (
+            <Play className="w-4 h-4 fill-amber-950 ml-0.5" />
           ) : (
-            <>
-              <Play className="w-3.5 h-3.5 fill-amber-950" />
-              <span className="hidden sm:inline">Resume</span>
-            </>
+            <Pause className="w-4 h-4 fill-amber-950" />
           )}
         </button>
 

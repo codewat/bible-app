@@ -165,11 +165,15 @@ export default function PrayersModal({
         stopAudio: handleStopAudio,
         pauseAudio: () => {
           if (isRosaryActive && !isRosaryPaused) {
-            speechService.pause();
+            if (speechService.mode === 'prayer') {
+              speechService.pause();
+            }
             setIsRosaryPaused(true);
           }
           if (isDmActive && !isDmPaused) {
-            speechService.pause();
+            if (speechService.mode === 'prayer') {
+              speechService.pause();
+            }
             setIsDmPaused(true);
           }
         },
@@ -303,10 +307,20 @@ export default function PrayersModal({
       return;
     }
     if (isRosaryPaused) {
-      speechService.resume();
-      setIsRosaryPaused(false);
+      // User wants to PLAY/RESUME Rosary
+      if (speechService.mode === 'prayer') {
+        speechService.resume();
+        setIsRosaryPaused(false);
+      } else {
+        // Scripture audio was running or active in speechService
+        // Re-launch Rosary recitation cleanly from current audioRosaryIndex
+        handlePlayRosaryAudio(audioRosaryIndex);
+      }
     } else {
-      speechService.pause();
+      // User wants to PAUSE Rosary
+      if (speechService.mode === 'prayer') {
+        speechService.pause();
+      }
       setIsRosaryPaused(true);
     }
   };
@@ -317,10 +331,18 @@ export default function PrayersModal({
       return;
     }
     if (isDmPaused) {
-      speechService.resume();
-      setIsDmPaused(false);
+      // User wants to PLAY/RESUME Divine Mercy
+      if (speechService.mode === 'prayer') {
+        speechService.resume();
+        setIsDmPaused(false);
+      } else {
+        handlePlayDivineMercyAudio(audioDmIndex);
+      }
     } else {
-      speechService.pause();
+      // User wants to PAUSE Divine Mercy
+      if (speechService.mode === 'prayer') {
+        speechService.pause();
+      }
       setIsDmPaused(true);
     }
   };

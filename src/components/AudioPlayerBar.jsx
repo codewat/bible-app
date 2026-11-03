@@ -1,31 +1,27 @@
 import React from 'react';
-import { Play, Pause, Square, SkipForward, SkipBack, Volume2, X, RotateCcw } from 'lucide-react';
+import { Play, Pause, Square, Volume2, X, RotateCcw } from 'lucide-react';
 import { speechService } from '../utils/speech';
 
 export default function AudioPlayerBar({
-  audioState,
+  isPaused,
   currentVerseSpeaking,
   bookName,
   chapter,
+  rate = 0.88,
+  onTogglePlay,
+  onRestartCurrent,
+  onSpeedChange,
   onStopAudio,
 }) {
-  if ((!audioState.isPlaying && !audioState.isPaused) || audioState.mode !== 'bible') {
-    return null;
-  }
-
   const rates = [0.8, 1.0, 1.2, 1.5];
 
-  const handleTogglePlay = () => {
-    if (audioState.isPaused) {
-      speechService.resume();
-    } else {
-      speechService.pause();
-    }
-  };
-
   const handleNextSpeed = () => {
-    const nextIdx = (rates.indexOf(audioState.rate) + 1) % rates.length;
-    speechService.setRate(rates[nextIdx]);
+    const nextIdx = (rates.indexOf(rate) + 1) % rates.length;
+    if (onSpeedChange) {
+      onSpeedChange(rates[nextIdx]);
+    } else {
+      speechService.setRate(rates[nextIdx]);
+    }
   };
 
   return (
@@ -44,6 +40,11 @@ export default function AudioPlayerBar({
             <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-300">
               Audio Bible
             </span>
+            {isPaused && (
+              <span className="text-[9px] bg-amber-500/30 px-1.5 py-0.2 rounded text-amber-200 shrink-0 font-medium">
+                ⏸ Paused
+              </span>
+            )}
           </div>
           <p className="text-xs text-neutral-400 truncate font-serif italic">
             {currentVerseSpeaking ? currentVerseSpeaking.text : 'Catholic Scripture'}
@@ -55,8 +56,8 @@ export default function AudioPlayerBar({
       <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
         {/* Restart Current Verse */}
         <button
-          onClick={() => speechService.restartCurrent()}
-          className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition"
+          onClick={onRestartCurrent || (() => speechService.restartCurrent())}
+          className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition cursor-pointer"
           title="Restart current verse from beginning"
         >
           <RotateCcw className="w-3.5 h-3.5" />
@@ -64,23 +65,23 @@ export default function AudioPlayerBar({
 
         <button
           onClick={handleNextSpeed}
-          className="text-xs px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-mono transition"
-          title="Change playback speed (restarts current verse at new speed)"
+          className="text-xs px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-mono transition cursor-pointer"
+          title="Change playback speed"
         >
-          {audioState.rate}x
+          {rate}x
         </button>
 
         <button
-          onClick={handleTogglePlay}
-          className="p-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white shadow transition transform active:scale-95"
-          title={audioState.isPaused ? 'Resume' : 'Pause'}
+          onClick={onTogglePlay}
+          className="p-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white shadow transition transform active:scale-95 flex items-center justify-center cursor-pointer"
+          title={isPaused ? 'Resume' : 'Pause'}
         >
-          {audioState.isPaused ? <Play className="w-4 h-4 fill-white" /> : <Pause className="w-4 h-4 fill-white" />}
+          {isPaused ? <Play className="w-4 h-4 fill-white ml-0.5" /> : <Pause className="w-4 h-4 fill-white" />}
         </button>
 
         <button
           onClick={onStopAudio}
-          className="p-2 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition"
+          className="p-2 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition cursor-pointer"
           title="Stop reading"
         >
           <Square className="w-4 h-4 fill-current" />
@@ -88,7 +89,7 @@ export default function AudioPlayerBar({
 
         <button
           onClick={onStopAudio}
-          className="p-1.5 text-neutral-500 hover:text-neutral-300 transition"
+          className="p-1.5 text-neutral-500 hover:text-neutral-300 transition cursor-pointer"
           title="Close player"
         >
           <X className="w-4 h-4" />

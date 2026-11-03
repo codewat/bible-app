@@ -92,6 +92,18 @@ export default function App() {
   });
   const prayerAudioControlsRef = useRef(null);
 
+  // Dedicated Scripture Audio State (allows scripture player to stay open and remember verse when prayer plays)
+  const [scriptureAudioState, setScriptureAudioState] = useState({
+    isActive: false,
+    isPaused: false,
+    bookName: '',
+    bookId: '',
+    chapter: 1,
+    verse: null,
+    verseObj: null,
+    rate: 0.88,
+  });
+
   const handlePausePrayerAudio = () => {
     if (prayerAudioControlsRef.current?.pauseAudio) {
       prayerAudioControlsRef.current.pauseAudio();
@@ -126,8 +138,31 @@ export default function App() {
 
     // Setup speech callbacks
     speechService.setCallbacks({
-      onVerseChange: (v) => setCurrentVerseSpeaking(v),
-      onStateChange: (state) => setAudioState(state),
+      onVerseChange: (v) => {
+        if (speechService.mode === 'bible') {
+          setCurrentVerseSpeaking(v);
+          if (v && v.verse) {
+            setScriptureAudioState((prev) => ({
+              ...prev,
+              verse: v.verse,
+              verseObj: v,
+            }));
+          }
+        }
+      },
+      onStateChange: (state) => {
+        setAudioState(state);
+        if (state.mode === 'prayer' && state.isPlaying && !state.isPaused) {
+          // If prayer is actively reciting, mark scripture as paused without closing its bar
+          setScriptureAudioState((prev) => (prev.isActive ? { ...prev, isPaused: true } : prev));
+        } else if (state.mode === 'bible') {
+          setScriptureAudioState((prev) => ({
+            ...prev,
+            isPaused: Boolean(state.isPaused),
+            rate: state.rate,
+          }));
+        }
+      },
     });
 
     return () => {
@@ -268,12 +303,23 @@ export default function App() {
   // Play Selected Verses
   const handlePlaySelectedVerses = (verses) => {
     handlePausePrayerAudio();
+    setScriptureAudioState({
+      isActive: true,
+      isPaused: false,
+      bookName: currentBookMeta?.modernName || '',
+      bookId: currentBookId,
+      chapter: currentChapter,
+      verse: verses[0]?.verse || 1,
+      verseObj: verses[0],
+      rate: audioState.rate || 0.88,
+    });
     speechService.playChapter(verses, 0);
   };
 
   // Navigation handlers
   const handleSelectBookChapter = (bookId, ch) => {
     speechService.stopScriptureAudio();
+    setScriptureAudioState((prev) => ({ ...prev, isActive: false, isPaused: false }));
     setCurrentBookId(bookId);
     setCurrentChapter(Number(ch));
     setSelectedVerses([]);
@@ -348,15 +394,80 @@ export default function App() {
 
   // Audio Play Chapter
   const handlePlayChapterAudio = () => {
-    if (audioState.isPlaying && audioState.mode === 'bible') {
-      speechService.stopScriptureAudio();
+    if (scriptureAudioState.isActive && !scriptureAudioState.isPaused && audioState.mode === 'bible' && audioState.isPlaying) {
+      speechService.pause();
+      setScriptureAudioState((prev) => ({ ...prev, isPaused: true }));
     } else {
       handlePausePrayerAudio();
+      setScriptureAudioState({
+        isActive: true,
+        isPaused: false,
+        bookName: currentBookMeta?.modernName || '',
+        bookId: currentBookId,
+        chapter: currentChapter,
+        verse: chapterVerses[0]?.verse || 1,
+        verseObj: chapterVerses[0],
+        rate: audioState.rate || 0.88,
+      });
       speechService.playChapter(chapterVerses, 0);
     }
   };
 
-  const isScriptureAudioActive = (audioState.isPlaying || audioState.isPaused) && audioState.mode === 'bible';
+  const handleToggleScriptureAudio = () => {
+    if (!scriptureAudioState.isPaused && audioState.mode === 'bible' && audioState.isPlaying) {
+      // Pause scripture audio
+      speechService.pause();
+      setScriptureAudioState((prev) => ({ ...prev, isPaused: true }));
+    } else {
+      // Resume / Play scripture audio -> PAUSE PRAYER FIRST!
+      handlePausePrayerAudio();
+      setScriptureAudioState((prev) => ({ ...prev, isPaused: false }));
+
+      if (audioState.mode === 'bible' && audioState.isPaused) {
+        speechService.resume();
+      } else {
+        // Re-launch scripture reading from the current verse
+        const startIdx = scriptureAudioState.verse
+          ? chapterVerses.findIndex((v) => v.verse === scriptureAudioState.verse)
+          : 0;
+        speechService.playChapter(chapterVerses, Math.max(0, startIdx));
+      }
+    }
+  };
+
+  const handleRestartScriptureVerse = () => {
+    handlePausePrayerAudio();
+    if (audioState.mode === 'bible' && audioState.isPlaying && !audioState.isPaused) {
+      speechService.restartCurrent();
+    } else {
+      const startIdx = scriptureAudioState.verse
+        ? chapterVerses.findIndex((v) => v.verse === scriptureAudioState.verse)
+        : 0;
+      speechService.playChapter(chapterVerses, Math.max(0, startIdx));
+    }
+    setScriptureAudioState((prev) => ({ ...prev, isPaused: false }));
+  };
+
+  const handleScriptureSpeedChange = (newRate) => {
+    speechService.setRate(newRate);
+    setScriptureAudioState((prev) => ({ ...prev, rate: newRate }));
+  };
+
+  const handleStopScriptureAudio = () => {
+    setScriptureAudioState({
+      isActive: false,
+      isPaused: false,
+      bookName: '',
+      bookId: '',
+      chapter: 1,
+      verse: null,
+      verseObj: null,
+      rate: 0.88,
+    });
+    speechService.stopScriptureAudio();
+  };
+
+  const isScriptureAudioActive = scriptureAudioState.isActive;
   const isPrayerAudioActive = !isPrayersOpen && (prayerAudioState.isRosaryActive || prayerAudioState.isDmActive);
   const hasAnyAudioActive = isScriptureAudioActive || isPrayerAudioActive;
 
@@ -374,7 +485,7 @@ export default function App() {
           onOpenPrayers={() => setIsPrayersOpen(true)}
           onOpenAuth={() => setIsAuthOpen(true)}
           onPlayChapterAudio={handlePlayChapterAudio}
-          isPlayingAudio={audioState.isPlaying && audioState.mode === 'bible'}
+          isPlayingAudio={scriptureAudioState.isActive && !scriptureAudioState.isPaused && audioState.mode === 'bible'}
           theme={theme}
           setTheme={setTheme}
           fontSize={fontSize}
@@ -390,11 +501,19 @@ export default function App() {
               {/* Scripture Audio Bar when active */}
               {isScriptureAudioActive && (
                 <AudioPlayerBar
-                  audioState={audioState}
-                  currentVerseSpeaking={currentVerseSpeaking}
-                  bookName={currentBookMeta?.modernName || ''}
-                  chapter={currentChapter}
-                  onStopAudio={() => speechService.stopScriptureAudio()}
+                  isPaused={scriptureAudioState.isPaused}
+                  currentVerseSpeaking={
+                    speechService.mode === 'bible'
+                      ? currentVerseSpeaking
+                      : (scriptureAudioState.verseObj || { verse: scriptureAudioState.verse, text: '' })
+                  }
+                  bookName={scriptureAudioState.bookName || currentBookMeta?.modernName || ''}
+                  chapter={scriptureAudioState.chapter || currentChapter}
+                  rate={scriptureAudioState.rate}
+                  onTogglePlay={handleToggleScriptureAudio}
+                  onRestartCurrent={handleRestartScriptureVerse}
+                  onSpeedChange={handleScriptureSpeedChange}
+                  onStopAudio={handleStopScriptureAudio}
                 />
               )}
 
