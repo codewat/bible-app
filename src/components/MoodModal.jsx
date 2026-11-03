@@ -18,7 +18,7 @@ export default function MoodModal({ isOpen, onClose, onNavigateToVerse }) {
   const handleSelectMood = (moodId) => {
     setSelectedMoodId(moodId);
     setVerseIndex(0);
-    speechService.stop();
+    speechService.stopScriptureAudio();
     setIsPlayingAudio(false);
     
     const mood = MOODS.find(m => m.id === moodId);
@@ -29,7 +29,7 @@ export default function MoodModal({ isOpen, onClose, onNavigateToVerse }) {
   };
 
   const handleNextVerse = () => {
-    speechService.stop();
+    speechService.stopScriptureAudio();
     setIsPlayingAudio(false);
     if (!currentMood) return;
     const nextIdx = (verseIndex + 1) % currentMood.verses.length;
@@ -53,7 +53,7 @@ export default function MoodModal({ isOpen, onClose, onNavigateToVerse }) {
   const handleListen = () => {
     if (!currentVerse) return;
     if (isPlayingAudio) {
-      speechService.stop();
+      speechService.stopScriptureAudio();
       setIsPlayingAudio(false);
     } else {
       setIsPlayingAudio(true);
@@ -70,13 +70,13 @@ export default function MoodModal({ isOpen, onClose, onNavigateToVerse }) {
 
   const handleGoToVerse = () => {
     if (!currentVerse) return;
-    speechService.stop();
+    speechService.stopScriptureAudio();
     onNavigateToVerse(currentVerse.bookId, currentVerse.chapter, currentVerse.verse);
     onClose();
   };
 
   const handleClose = () => {
-    speechService.stop();
+    speechService.stopScriptureAudio();
     onClose();
   };
 
@@ -93,7 +93,7 @@ export default function MoodModal({ isOpen, onClose, onNavigateToVerse }) {
               <button 
                 onClick={() => {
                   setSelectedMoodId(null);
-                  speechService.stop();
+                  speechService.stopScriptureAudio();
                   setIsPlayingAudio(false);
                 }}
                 className="p-1.5 -ml-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition"

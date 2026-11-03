@@ -485,6 +485,13 @@ class SpeechController {
     this.triggerState();
   }
 
+  // Stops scripture reading while leaving background prayer audio (Rosary, Divine Mercy) playing undisturbed
+  stopScriptureAudio() {
+    if (this.mode === 'bible') {
+      this.stop();
+    }
+  }
+
   triggerState() {
     const state = {
       isPlaying: this.isPlaying,

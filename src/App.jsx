@@ -268,7 +268,7 @@ export default function App() {
 
   // Navigation handlers
   const handleSelectBookChapter = (bookId, ch) => {
-    speechService.stop();
+    speechService.stopScriptureAudio();
     setCurrentBookId(bookId);
     setCurrentChapter(Number(ch));
     setSelectedVerses([]);
@@ -276,7 +276,7 @@ export default function App() {
   };
 
   const handleNavigateToVerse = (bookId, ch, verseNum) => {
-    speechService.stop();
+    speechService.stopScriptureAudio();
     setCurrentBookId(bookId);
     setCurrentChapter(Number(ch));
 
@@ -299,7 +299,7 @@ export default function App() {
     (booksMeta.findIndex((b) => b.id === currentBookId) > 0);
 
   const handlePrevChapter = () => {
-    speechService.stop();
+    speechService.stopScriptureAudio();
     if (currentChapter > 1) {
       setCurrentChapter((c) => c - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -321,7 +321,7 @@ export default function App() {
     curIdx < booksMeta.length - 1;
 
   const handleNextChapter = () => {
-    speechService.stop();
+    speechService.stopScriptureAudio();
     if (currentBookMeta && currentChapter < currentBookMeta.chapterCount) {
       setCurrentChapter((c) => c + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
