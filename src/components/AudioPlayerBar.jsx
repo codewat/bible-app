@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, SkipForward, SkipBack, Volume2, X } from 'lucide-react';
+import { Play, Pause, Square, SkipForward, SkipBack, Volume2, X, RotateCcw } from 'lucide-react';
 import { speechService } from '../utils/speech';
 
 export default function AudioPlayerBar({
@@ -52,11 +52,20 @@ export default function AudioPlayerBar({
       </div>
 
       {/* Audio Controls */}
-      <div className="flex items-center space-x-2 shrink-0">
+      <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+        {/* Restart Current Verse */}
+        <button
+          onClick={() => speechService.restartCurrent()}
+          className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition"
+          title="Restart current verse from beginning"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+        </button>
+
         <button
           onClick={handleNextSpeed}
           className="text-xs px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-mono transition"
-          title="Playback Speed"
+          title="Change playback speed (restarts current verse at new speed)"
         >
           {audioState.rate}x
         </button>

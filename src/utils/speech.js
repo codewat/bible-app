@@ -162,21 +162,48 @@ class SpeechController {
     this.onStateChangeCallback = onStateChange;
   }
 
+  clearPendingAdvance() {
+    if (this.advanceTimer) {
+      clearTimeout(this.advanceTimer);
+      this.advanceTimer = null;
+    }
+    if (this.restartTimer) {
+      clearTimeout(this.restartTimer);
+      this.restartTimer = null;
+    }
+  }
+
+  restartCurrent() {
+    if (!this.synth || !this.versesQueue || this.versesQueue.length === 0) return;
+    const curIndex = Math.max(0, Math.min(this.currentIndex, this.versesQueue.length - 1));
+
+    // Invalidate any active utterance so its callbacks can never advance
+    this.utteranceId = (this.utteranceId || 0) + 1;
+    this.clearPendingAdvance();
+
+    if (this.currentUtterance) {
+      this.currentUtterance.onend = null;
+      this.currentUtterance.onerror = null;
+      this.currentUtterance = null;
+    }
+
+    if (this.synth) {
+      this.synth.cancel();
+    }
+
+    // Brief timeout ensures OS speech engine queue is completely flushed before restarting
+    this.restartTimer = setTimeout(() => {
+      if (this.isPlaying && !this.isPaused) {
+        this.speakVerseAt(curIndex);
+      }
+    }, 80);
+  }
+
   setRate(rate) {
     this.rate = rate;
     this.triggerState();
     if (this.isPlaying && !this.isPaused) {
-      const curIndex = this.currentIndex;
-      // Detach listeners from current utterance so cancel does not advance to next verse
-      if (this.currentUtterance) {
-        this.currentUtterance.onend = null;
-        this.currentUtterance.onerror = null;
-      }
-      if (this.synth) {
-        this.synth.cancel();
-      }
-      // Re-speak current verse at new rate
-      this.speakVerseAt(curIndex);
+      this.restartCurrent();
     }
   }
 
@@ -333,6 +360,8 @@ class SpeechController {
   }
 
   speakVerseAt(index) {
+    this.clearPendingAdvance();
+
     if (!this.synth || index >= this.versesQueue.length) {
       if (this.onCompleteCallback) {
         try {
@@ -377,11 +406,18 @@ class SpeechController {
       utterance.voice = englishVoice;
     }
 
+    // Generation token so stale or cancelled utterances can NEVER advance
+    this.utteranceId = (this.utteranceId || 0) + 1;
+    const currentId = this.utteranceId;
+
     utterance.onend = () => {
+      // Discard event if this utterance is no longer active
+      if (this.utteranceId !== currentId) return;
       if (this.isPlaying && !this.isPaused) {
-        // Natural meditative breathing pause between prayers (650ms)
-        setTimeout(() => {
-          if (this.isPlaying && !this.isPaused) {
+        this.clearPendingAdvance();
+        // Natural meditative breathing pause between verses (650ms)
+        this.advanceTimer = setTimeout(() => {
+          if (this.utteranceId === currentId && this.isPlaying && !this.isPaused) {
             this.speakVerseAt(this.currentIndex + 1);
           }
         }, this.interPrayerPauseMs);
@@ -389,14 +425,17 @@ class SpeechController {
     };
 
     utterance.onerror = (e) => {
+      // Discard event if this utterance is no longer active
+      if (this.utteranceId !== currentId) return;
       // Ignore cancellations or interruptions caused by changing playback rate or user jumping
       if (e.error === 'canceled' || e.error === 'interrupted') {
         return;
       }
       console.warn('SpeechSynthesis error:', e);
       if (this.isPlaying && !this.isPaused) {
-        setTimeout(() => {
-          if (this.isPlaying && !this.isPaused) {
+        this.clearPendingAdvance();
+        this.advanceTimer = setTimeout(() => {
+          if (this.utteranceId === currentId && this.isPlaying && !this.isPaused) {
             this.speakVerseAt(this.currentIndex + 1);
           }
         }, this.interPrayerPauseMs);
@@ -423,9 +462,12 @@ class SpeechController {
 
   stop() {
     this.stopKeepAlive();
+    this.clearPendingAdvance();
+    this.utteranceId = (this.utteranceId || 0) + 1;
     if (this.currentUtterance) {
       this.currentUtterance.onend = null;
       this.currentUtterance.onerror = null;
+      this.currentUtterance = null;
     }
     if (this.synth) {
       this.synth.cancel();
@@ -433,7 +475,6 @@ class SpeechController {
     this.isPlaying = false;
     this.isPaused = false;
     this.mode = null;
-    this.currentUtterance = null;
     this.versesQueue = [];
     this.currentIndex = 0;
     this.onItemChangeCallback = null;
