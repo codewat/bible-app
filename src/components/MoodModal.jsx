@@ -344,7 +344,7 @@ export default function MoodModal({ isOpen, onClose, onNavigateToVerse }) {
         <div className="px-6 py-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
           <div className="flex items-center space-x-1">
             <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
-            <span>Catholic Holy Bible • 73 Canonical Books</span>
+            <span>Catholic Holy Bible • 10 Scriptures per feeling</span>
           </div>
           <button
             onClick={handleClose}
