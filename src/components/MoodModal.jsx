@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MOODS } from '../data/moodVerses';
-import { Sparkles, BookOpen, Volume2, Bookmark, Check, RefreshCw, X, ArrowLeft, Heart } from 'lucide-react';
+import { Sparkles, BookOpen, Volume2, Bookmark, Check, RefreshCw, X, ArrowLeft, Heart, ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
 import { speechService } from '../utils/speech';
 import { toggleBookmark, isBookmarked } from '../utils/storage';
 
@@ -17,22 +17,58 @@ export default function MoodModal({ isOpen, onClose, onNavigateToVerse }) {
 
   const handleSelectMood = (moodId) => {
     setSelectedMoodId(moodId);
-    setVerseIndex(0);
     speechService.stopScriptureAudio();
     setIsPlayingAudio(false);
     
     const mood = MOODS.find(m => m.id === moodId);
-    if (mood && mood.verses[0]) {
-      const v = mood.verses[0];
+    if (mood && mood.verses.length > 0) {
+      // Start with a randomized verse index so each mood opening feels fresh and dynamic
+      const startIdx = Math.floor(Math.random() * mood.verses.length);
+      setVerseIndex(startIdx);
+      const v = mood.verses[startIdx];
       setBookmarked(isBookmarked(v.bookId, v.chapter, v.verse));
+    } else {
+      setVerseIndex(0);
     }
   };
 
   const handleNextVerse = () => {
     speechService.stopScriptureAudio();
     setIsPlayingAudio(false);
-    if (!currentMood) return;
+    if (!currentMood || !currentMood.verses.length) return;
     const nextIdx = (verseIndex + 1) % currentMood.verses.length;
+    setVerseIndex(nextIdx);
+    const v = currentMood.verses[nextIdx];
+    setBookmarked(isBookmarked(v.bookId, v.chapter, v.verse));
+  };
+
+  const handlePrevVerse = () => {
+    speechService.stopScriptureAudio();
+    setIsPlayingAudio(false);
+    if (!currentMood || !currentMood.verses.length) return;
+    const prevIdx = (verseIndex - 1 + currentMood.verses.length) % currentMood.verses.length;
+    setVerseIndex(prevIdx);
+    const v = currentMood.verses[prevIdx];
+    setBookmarked(isBookmarked(v.bookId, v.chapter, v.verse));
+  };
+
+  const handleJumpToVerse = (idx) => {
+    speechService.stopScriptureAudio();
+    setIsPlayingAudio(false);
+    if (!currentMood || idx < 0 || idx >= currentMood.verses.length) return;
+    setVerseIndex(idx);
+    const v = currentMood.verses[idx];
+    setBookmarked(isBookmarked(v.bookId, v.chapter, v.verse));
+  };
+
+  const handleRandomVerse = () => {
+    speechService.stopScriptureAudio();
+    setIsPlayingAudio(false);
+    if (!currentMood || currentMood.verses.length <= 1) return;
+    let nextIdx;
+    do {
+      nextIdx = Math.floor(Math.random() * currentMood.verses.length);
+    } while (nextIdx === verseIndex && currentMood.verses.length > 1);
     setVerseIndex(nextIdx);
     const v = currentMood.verses[nextIdx];
     setBookmarked(isBookmarked(v.bookId, v.chapter, v.verse));
@@ -154,11 +190,14 @@ export default function MoodModal({ isOpen, onClose, onNavigateToVerse }) {
                     onClick={() => handleSelectMood(mood.id)}
                     className="group relative flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:border-amber-400 dark:hover:border-amber-500/50 bg-gradient-to-b from-neutral-50/50 to-white dark:from-neutral-800/40 dark:to-neutral-900/40 hover:shadow-md transition-all text-center hover:-translate-y-0.5"
                   >
-                    <span className="text-3xl mb-2 group-hover:scale-110 transition-transform duration-200">
+                    <span className="text-3xl mb-1.5 group-hover:scale-110 transition-transform duration-200">
                       {mood.emoji}
                     </span>
-                    <span className="font-medium text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 leading-tight">
+                    <span className="font-semibold text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 leading-tight">
                       {mood.label}
+                    </span>
+                    <span className="mt-1 text-[11px] text-amber-700/80 dark:text-amber-400/80 font-medium">
+                      {mood.verses.length} Scriptures
                     </span>
                   </button>
                 ))}
@@ -170,12 +209,17 @@ export default function MoodModal({ isOpen, onClose, onNavigateToVerse }) {
               <div className="space-y-5 animate-fadeIn">
                 {/* Verse Card */}
                 <div className="relative p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-amber-50/70 via-orange-50/30 to-amber-100/40 dark:from-neutral-800 dark:via-neutral-800/60 dark:to-amber-950/20 border border-amber-200/80 dark:border-amber-700/30 shadow-sm">
-                  {/* Citation Badge */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200">
-                      {currentVerse.citation}
-                    </span>
-                    <span className="text-xs text-neutral-400">
+                  {/* Citation Badge & Scripture Count */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center space-x-2">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200">
+                        {currentVerse.citation}
+                      </span>
+                      <span className="text-xs font-medium text-amber-800 dark:text-amber-300">
+                        ({verseIndex + 1} of {currentMood.verses.length})
+                      </span>
+                    </div>
+                    <span className="text-xs text-neutral-400 hidden sm:inline">
                       Douay-Rheims (Catholic Bible)
                     </span>
                   </div>
@@ -193,8 +237,8 @@ export default function MoodModal({ isOpen, onClose, onNavigateToVerse }) {
                     {currentVerse.reflection}
                   </div>
 
-                  {/* Action Buttons within Card */}
-                  <div className="mt-5 pt-4 border-t border-amber-200/60 dark:border-neutral-700/60 flex flex-wrap items-center justify-between gap-2">
+                  {/* Action Buttons & Scripture Navigator */}
+                  <div className="mt-5 pt-4 border-t border-amber-200/60 dark:border-neutral-700/60 flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={handleListen}
@@ -223,14 +267,50 @@ export default function MoodModal({ isOpen, onClose, onNavigateToVerse }) {
                       </button>
                     </div>
 
+                    {/* 10-verse navigator: Prev, numbers 1-10, Next, Shuffle */}
                     {currentMood.verses.length > 1 && (
-                      <button
-                        onClick={handleNextVerse}
-                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-neutral-700 transition"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span>Another verse ({verseIndex + 1}/{currentMood.verses.length})</span>
-                      </button>
+                      <div className="flex items-center space-x-1 justify-center sm:justify-end overflow-x-auto py-0.5">
+                        <button
+                          onClick={handlePrevVerse}
+                          className="p-1.5 rounded-lg bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-600 text-neutral-700 dark:text-neutral-200 transition"
+                          title="Previous Scripture"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+
+                        <div className="flex items-center space-x-1">
+                          {currentMood.verses.map((_, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleJumpToVerse(idx)}
+                              className={`w-6 h-6 sm:w-7 sm:h-7 text-xs font-semibold rounded-md transition flex items-center justify-center ${
+                                verseIndex === idx
+                                  ? 'bg-amber-600 text-white shadow-sm'
+                                  : 'bg-white/80 dark:bg-neutral-700/80 text-neutral-600 dark:text-neutral-300 hover:bg-amber-100 dark:hover:bg-neutral-600 border border-neutral-200 dark:border-neutral-600'
+                              }`}
+                              title={`Scripture ${idx + 1}`}
+                            >
+                              {idx + 1}
+                            </button>
+                          ))}
+                        </div>
+
+                        <button
+                          onClick={handleNextVerse}
+                          className="p-1.5 rounded-lg bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-600 text-neutral-700 dark:text-neutral-200 transition"
+                          title="Next Scripture"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={handleRandomVerse}
+                          className="p-1.5 rounded-lg bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 hover:bg-amber-100 dark:hover:bg-neutral-600 text-amber-800 dark:text-amber-300 transition"
+                          title="Shuffle / Random Scripture"
+                        >
+                          <Shuffle className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
